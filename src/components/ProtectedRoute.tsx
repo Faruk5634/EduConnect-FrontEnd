@@ -9,7 +9,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
 
     // Eğer bilet yoksa, acımadan Login (Giriş) sayfasına geri postala!
     if (!token) {
-        return <Navigate to="/" />;
+        return <Navigate to="/" replace />;
     }
 
     // Bilet varsa, geçişe izin ver

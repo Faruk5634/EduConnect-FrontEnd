@@ -1,16 +1,16 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import ProtectedRoute from './components/ProtectedRoute'; // Memuru çağırdık
-import './App.css';
+import ProtectedRoute from './components/ProtectedRoute'; // 🚀 Kalkanımızı import ettik
 
 function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
+        {/* Login sayfası herkese açık, korumaya gerek yok */}
         <Route path="/" element={<Login />} />
 
-        {/* Dashboard'u koruma altına aldık! */}
+        {/* 🚀 Dashboard sayfasını ProtectedRoute kalkanının içine aldık! */}
         <Route
           path="/dashboard"
           element={
@@ -20,7 +20,7 @@ function App() {
           }
         />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
 
