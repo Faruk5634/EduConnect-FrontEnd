@@ -7,7 +7,11 @@ export default function Dashboard() {
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const [newStudent, setNewStudent] = useState({
+    // 🚀 YENİ: Hangi öğrenciyi düzenlediğimizi aklımızda tutacağımız hafıza (ID)
+    // Eğer null ise "Yeni Ekleme" modundayız, eğer bir ID varsa "Güncelleme" modundayız demektir.
+    const [editId, setEditId] = useState<number | null>(null);
+
+    const [studentForm, setStudentForm] = useState({
         schoolNumber: '',
         firstName: '',
         lastName: ''
@@ -28,31 +32,55 @@ export default function Dashboard() {
         }
     };
 
-    const handleAddStudent = async (e: React.FormEvent) => {
+    // 🚀 YENİ: Hem Ekleme (POST) hem Güncelleme (PUT) işini yapan Zeki Fonksiyon
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const response = await api.post('/students', newStudent);
-            setStudents([...students, response.data]);
-            setNewStudent({ schoolNumber: '', firstName: '', lastName: '' });
+            if (editId) {
+                // --- GÜNCELLEME MODU ---
+                await api.put(`/students/${editId}`, studentForm);
+
+                // Tablodaki eski veriyi, formdaki yeni veriyle değiştiriyoruz
+                setStudents(students.map(student =>
+                    student.id === editId ? { ...studentForm, id: editId } : student
+                ));
+
+                setEditId(null); // Güncelleme bitti, hafızayı sıfırla
+                alert("Öğrenci başarıyla güncellendi! ✏️");
+
+            } else {
+                // --- YENİ EKLEME MODU ---
+                const response = await api.post('/students', studentForm);
+                setStudents([...students, response.data]);
+            }
+
+            // İşlem bitince formu tertemiz yap
+            setStudentForm({ schoolNumber: '', firstName: '', lastName: '' });
+
         } catch (error) {
-            console.error("Öğrenci eklenirken hata oluştu!", error);
-            alert("Öğrenci eklenemedi! (CORS veya Sunucu hatası olabilir)");
+            console.error("İşlem sırasında hata oluştu!", error);
+            alert("İşlem başarısız! Sunucu hatası olabilir.");
         }
     };
 
-    // 🚀 YENİ: Öğrenci Silme Fonksiyonu (DELETE)
+    // 🚀 YENİ: Düzenle Butonuna basınca çalışacak fonksiyon
+    const handleEditClick = (student: Student) => {
+        setEditId(student.id); // Hafızaya ID'yi yaz (Böylece Güncelleme moduna geçeriz)
+        setStudentForm({       // Formun içini öğrencinin eski bilgileriyle doldur
+            schoolNumber: student.schoolNumber,
+            firstName: student.firstName,
+            lastName: student.lastName
+        });
+        window.scrollTo({ top: 0, behavior: 'smooth' }); // Ekranı yavaşça en üste kaydır
+    };
+
     const handleDeleteStudent = async (id: number) => {
-        // 1. Kullanıcıya "Emin misin?" diye soruyoruz
         const isConfirmed = window.confirm("Bu öğrenciyi silmek istediğinize emin misiniz?");
-        if (!isConfirmed) return; // İptale basarsa işlemi durdur
+        if (!isConfirmed) return;
 
         try {
-            // 2. Java kalesine "Bu ID'li öğrenciyi yok et" emrini gönderiyoruz
             await api.delete(`/students/${id}`);
-
-            // 3. Ekranda anında yok olması için sildiğimiz öğrenciyi listeden filtreleyip çıkarıyoruz
             setStudents(students.filter(student => student.id !== id));
-
         } catch (error) {
             console.error("Öğrenci silinirken hata oluştu!", error);
             alert("Silme işlemi başarısız oldu!");
@@ -67,35 +95,44 @@ export default function Dashboard() {
                 <h2>🎓 Öğrenci Yönetim Paneli</h2>
 
                 <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
-                    <h3>Yeni Öğrenci Ekle</h3>
-                    <form onSubmit={handleAddStudent} style={{ display: 'flex', gap: '10px' }}>
+                    {/* 🚀 Başlık dinamik değişiyor */}
+                    <h3>{editId ? "✏️ Öğrenciyi Düzenle" : "➕ Yeni Öğrenci Ekle"}</h3>
+
+                    <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px' }}>
                         <input
-                            type="text"
-                            placeholder="Okul No"
-                            value={newStudent.schoolNumber}
-                            onChange={(e) => setNewStudent({ ...newStudent, schoolNumber: e.target.value })}
-                            required
+                            type="text" placeholder="Okul No" required
+                            value={studentForm.schoolNumber}
+                            onChange={(e) => setStudentForm({ ...studentForm, schoolNumber: e.target.value })}
                             style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
                         />
                         <input
-                            type="text"
-                            placeholder="Ad"
-                            value={newStudent.firstName}
-                            onChange={(e) => setNewStudent({ ...newStudent, firstName: e.target.value })}
-                            required
+                            type="text" placeholder="Ad" required
+                            value={studentForm.firstName}
+                            onChange={(e) => setStudentForm({ ...studentForm, firstName: e.target.value })}
                             style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
                         />
                         <input
-                            type="text"
-                            placeholder="Soyad"
-                            value={newStudent.lastName}
-                            onChange={(e) => setNewStudent({ ...newStudent, lastName: e.target.value })}
-                            required
+                            type="text" placeholder="Soyad" required
+                            value={studentForm.lastName}
+                            onChange={(e) => setStudentForm({ ...studentForm, lastName: e.target.value })}
                             style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
                         />
-                        <button type="submit" style={{ padding: '8px 15px', backgroundColor: '#2ecc71', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-                            Ekle
+
+                        {/* 🚀 Buton rengi ve yazısı duruma göre değişiyor */}
+                        <button type="submit" style={{ padding: '8px 15px', backgroundColor: editId ? '#3498db' : '#2ecc71', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+                            {editId ? "Güncelle" : "Ekle"}
                         </button>
+
+                        {/* 🚀 Eğer düzenleme modundaysak, vazgeçme butonu çıkar */}
+                        {editId && (
+                            <button
+                                type="button"
+                                onClick={() => { setEditId(null); setStudentForm({ schoolNumber: '', firstName: '', lastName: '' }); }}
+                                style={{ padding: '8px 15px', backgroundColor: '#95a5a6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                            >
+                                İptal
+                            </button>
+                        )}
                     </form>
                 </div>
 
@@ -109,7 +146,6 @@ export default function Dashboard() {
                                 <th style={{ padding: '10px' }}>Okul No</th>
                                 <th style={{ padding: '10px' }}>Ad</th>
                                 <th style={{ padding: '10px' }}>Soyad</th>
-                                {/* 🚀 YENİ: İşlemler Sütunu */}
                                 <th style={{ padding: '10px', textAlign: 'center' }}>İşlemler</th>
                             </tr>
                         </thead>
@@ -120,8 +156,15 @@ export default function Dashboard() {
                                     <td style={{ padding: '10px' }}>{student.schoolNumber}</td>
                                     <td style={{ padding: '10px' }}>{student.firstName}</td>
                                     <td style={{ padding: '10px' }}>{student.lastName}</td>
-                                    {/* 🚀 YENİ: Sil Butonu */}
                                     <td style={{ padding: '10px', textAlign: 'center' }}>
+                                        {/* 🚀 YENİ: Düzenle Butonu */}
+                                        <button
+                                            onClick={() => handleEditClick(student)}
+                                            style={{ backgroundColor: '#f1c40f', color: '#333', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', marginRight: '10px' }}
+                                        >
+                                            Düzenle
+                                        </button>
+
                                         <button
                                             onClick={() => handleDeleteStudent(student.id)}
                                             style={{ backgroundColor: '#e74c3c', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
