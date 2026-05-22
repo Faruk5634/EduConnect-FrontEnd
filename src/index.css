@@ -74,3 +74,21 @@ button {
 button:hover {
   background-color: #2980b9;
 }
+
+/* Ekranın kenarlarındaki o varsayılan beyaz boşlukları sıfırlıyoruz */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #f8f9fa;
+  /* Arka plana çok hafif, şık bir gri tonu verdik */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Vite'ın o her şeyi ortalayan ve sıkan root div'ini serbest bırakıyoruz */
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
