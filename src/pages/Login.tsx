@@ -16,10 +16,31 @@ export default function Login() {
             const response = await api.post('/auth/login', request);
             const token = response.data.token;
 
+            // 1. Bileti kasaya atıyoruz (Bu zaten vardı)
             localStorage.setItem('jwtToken', token);
 
-            // Eski "alert" satırını silip yerine bunu yazıyoruz:
-            navigate('/dashboard'); // 🚀 Bilet alındığı an rotayı Dashboard'a çevir!
+            // 🚀 SİHİRLİ DOKUNUŞ: Biletin ambalajını (Payload/Gövde) açıp içindeki rütbeyi (role) okuyoruz!
+            // Bir JWT üç parçadan oluşur (Başlık.Gövde.İmza). Biz ortadaki (1. indeksli) parçayı alıyoruz.
+            const payloadBase64 = token.split('.')[1];
+            // Base64 şifresini çözüp JSON formatına çeviriyoruz
+            const decodedPayload = JSON.parse(window.atob(payloadBase64));
+
+            // Okuduğumuz rütbeyi de tarayıcının kasasına kaydediyoruz!
+            const userRole = decodedPayload.role;
+            localStorage.setItem('userRole', userRole);
+
+            console.log("Gemiye binen kişinin rütbesi tespit edildi:", userRole);
+
+            // 🚀 YÖNLENDİRME ZEKASI: Rütbeye göre doğru kamaraya (sayfaya) yönlendir.
+            if (userRole === 'ROLE_ADMIN') {
+                navigate('/dashboard'); // Adminler yönetim paneline
+            } else if (userRole === 'ROLE_TEACHER') {
+                navigate('/teacher-panel'); // Öğretmenler kendi paneline (Bu sayfayı daha sonra yapacağız)
+            } else if (userRole === 'ROLE_PARENT') {
+                navigate('/parent-panel'); // Veliler veli paneline (Bu sayfayı da sonra yapacağız)
+            } else {
+                navigate('/student-panel'); // Öğrenciler kendi duyuru paneline
+            }
 
         } catch (error) {
             console.error("Eyvah, kaleden ret yedik!", error);
