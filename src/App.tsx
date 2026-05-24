@@ -1,7 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import ProtectedRoute from './components/ProtectedRoute'; // 🚀 Kalkanımızı import ettik
+import ProtectedRoute from './components/ProtectedRoute';
+import TeacherPanel from './pages/TeacherPanel';
 
 function App() {
   return (
@@ -16,6 +17,15 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/teacher-panel"
+          element={
+            <ProtectedRoute allowedRoles={['ROLE_TEACHER']}>
+              <TeacherPanel />
             </ProtectedRoute>
           }
         />
