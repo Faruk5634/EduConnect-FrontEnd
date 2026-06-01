@@ -9,7 +9,7 @@ export const api = axios.create({
 api.interceptors.request.use(
     (config) => {
         // 1. Tarayıcının kasasından (localStorage) o şifreli bileti al
-        const token = localStorage.getItem('jwtToken');
+        const token = localStorage.getItem('token');
 
         // 2. Eğer bilet varsa, gidecek olan mesajın (header) üzerine zımbala!
         // Not: Java tarafı biletin başında "Bearer " kelimesini görmek ister, bu bir güvenlik standardıdır.
