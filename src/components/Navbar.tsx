@@ -5,8 +5,9 @@ export default function Navbar() {
 
     // Çıkış yapma fonksiyonu
     const handleLogout = () => {
-        // 1. Kasadaki (localStorage) bileti yırtıp atıyoruz
-        localStorage.removeItem('jwtToken');
+        // 1. Kasadaki (localStorage) asıl bileti yırtıp atıyoruz (jwtToken yerine token yapıyoruz)
+        localStorage.removeItem('token');
+        localStorage.removeItem('userRole'); // Hazır çıkmışken rütbeyi de temizleyelim tam olsun!
 
         // 2. Kullanıcıyı anında Login (Giriş) ekranına fırlatıyoruz
         navigate('/');
