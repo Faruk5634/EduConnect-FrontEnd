@@ -82,7 +82,15 @@ export default function ClassroomTab() {
     const handleCreateClass = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await api.post('/classrooms', { name: classForm.name, gradeLevel: Number(classForm.gradeLevel) });
+            // 1. Önce sınıfı makine dairesinde oluşturuyoruz
+            const response = await api.post('/classrooms', { name: classForm.name, gradeLevel: Number(classForm.gradeLevel) });
+            const newClassId = response.data.id;
+
+            // 🚀 2. Eğer kaptan bir öğretmen seçtiyse, oluşturulan yeni sınıfa o öğretmeni atıyoruz!
+            if (classForm.teacherId) {
+                await api.put(`/classrooms/${newClassId}/teacher/${classForm.teacherId}`);
+            }
+
             alert("Sınıf başarıyla oluşturuldu! 🏫");
             setIsCreateModalOpen(false);
             setClassForm({ name: '', gradeLevel: '', teacherId: '' });
@@ -306,6 +314,15 @@ export default function ClassroomTab() {
                         <form onSubmit={handleCreateClass} style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px' }}>
                             <input type="text" placeholder="Sınıf Adı (Örn: 10-A, 11-B)" required value={classForm.name} onChange={e => setClassForm({...classForm, name: e.target.value})} style={inputStyle} />
                             <input type="number" placeholder="Sınıf Derecesi (Örn: 10, 11)" required value={classForm.gradeLevel} onChange={e => setClassForm({...classForm, gradeLevel: e.target.value})} style={inputStyle} />
+
+                            {/* 🚀 YENİ EKLENEN AÇILIR MENÜ: Öğretmen Seçimi */}
+                            <select value={classForm.teacherId} onChange={e => setClassForm({...classForm, teacherId: e.target.value})} style={inputStyle}>
+                                <option value="">👨‍🏫 Rehber Öğretmen Seçiniz (İsteğe Bağlı)</option>
+                                {teachers.map(t => (
+                                    <option key={t.id} value={t.id}>{t.firstName} {t.lastName} ({t.branch})</option>
+                                ))}
+                            </select>
+
                             <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                                 <button type="button" onClick={() => setIsCreateModalOpen(false)} style={{ flex: 1, padding: '12px', backgroundColor: '#94a3b8', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>İptal</button>
                                 <button type="submit" style={{ flex: 2, padding: '12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Sınıfı Oluştur</button>

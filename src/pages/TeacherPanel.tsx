@@ -25,10 +25,13 @@ export default function TeacherPanel() {
     const [classroomId, setClassroomId] = useState('');
     const [message, setMessage] = useState('');
 
+    // 🚀 YENİ: Dosya tutucu
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const token = localStorage.getItem('jwtToken');
+                const token = localStorage.getItem('jwtToken') || localStorage.getItem('token');
                 const response = await api.get('/teachers/me', {
                     headers: { Authorization: `Bearer ${token}` }
                 });
@@ -49,28 +52,37 @@ export default function TeacherPanel() {
 
     // Duyuru Gönderme Fonksiyonu
     const handleMakeAnnouncement = async (e: React.FormEvent) => {
-        e.preventDefault(); // Sayfanın yenilenmesini engeller
+        e.preventDefault();
         setMessage('');
 
         try {
-            const token = localStorage.getItem('jwtToken');
+            const token = localStorage.getItem('jwtToken') || localStorage.getItem('token');
 
-            // Makine dairesinin (Java'nın) beklediği tam paket yapısı
-            const payload = {
-                title: title,
-                content: content,
-                type: type,
-                classroom: { id: parseInt(classroomId) } // Sınıfın benzersiz ID'si
-            };
+            // 🚀 ARTIK JSON DEĞİL, FORMDATA (Çok Parçalı) GÖNDERİYORUZ
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('content', content);
+            formData.append('type', type);
 
-            // 🚀 İNATÇI HAYALETİ KESEN SATIR: İstek doğrudan kesinleştirdiğimiz '/create' rotasına gidiyor!
-            await api.post('/announcements/create', payload, {
-                headers: { Authorization: `Bearer ${token}` }
+            if (classroomId) {
+                formData.append('classroomId', classroomId);
+            }
+
+            if (selectedFile) {
+                formData.append('file', selectedFile);
+            }
+
+            await api.post('/announcements/create', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    Authorization: `Bearer ${token}`
+                }
             });
 
             setMessage('✅ Duyuru başarıyla sınıfa gönderildi!');
-            setTitle(''); // Formu temizle
+            setTitle('');
             setContent('');
+            setSelectedFile(null); // Form gönderilince seçili dosyayı da sıfırla
         } catch (error) {
             console.error("Duyuru gönderilemedi:", error);
             setMessage('❌ Duyuru gönderilirken bir hata oluştu.');
@@ -83,9 +95,9 @@ export default function TeacherPanel() {
         <div style={{ padding: '30px', maxWidth: '800px', margin: '0 auto', fontFamily: 'sans-serif' }}>
             <h1>👨‍🏫 Hoş Geldiniz, {profile?.firstName} {profile?.lastName} Öğretmenim!</h1>
 
-            <div style={{ display: 'flex', gap: '20px', marginTop: '30px' }}>
+            <div style={{ display: 'flex', gap: '20px', marginTop: '30px', flexWrap: 'wrap' }}>
                 {/* SOL TARAF: Duyuru Yapma Formu */}
-                <div style={{ flex: 2, padding: '20px', backgroundColor: '#f0f4f8', borderRadius: '8px' }}>
+                <div style={{ flex: 2, padding: '20px', backgroundColor: '#f0f4f8', borderRadius: '8px', minWidth: '300px' }}>
                     <h2>📢 Yeni Duyuru Yayınla</h2>
                     <form onSubmit={handleMakeAnnouncement} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
 
@@ -94,7 +106,7 @@ export default function TeacherPanel() {
                             <select
                                 value={classroomId}
                                 onChange={(e) => setClassroomId(e.target.value)}
-                                style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+                                style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ccc' }}
                                 required
                             >
                                 {profile?.homeroomClasses?.map(c => (
@@ -108,7 +120,7 @@ export default function TeacherPanel() {
                             <select
                                 value={type}
                                 onChange={(e) => setType(e.target.value)}
-                                style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+                                style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ccc' }}
                             >
                                 <option value="GENERAL">Genel Duyuru</option>
                                 <option value="HOMEWORK">Ödev</option>
@@ -123,7 +135,7 @@ export default function TeacherPanel() {
                                 type="text"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
-                                style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+                                style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ccc' }}
                                 required
                             />
                         </div>
@@ -134,28 +146,44 @@ export default function TeacherPanel() {
                                 rows={4}
                                 value={content}
                                 onChange={(e) => setContent(e.target.value)}
-                                style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+                                style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ccc', resize: 'vertical' }}
                                 required
                             />
                         </div>
 
-                        <button type="submit" style={{ padding: '10px', backgroundColor: '#0056b3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                            Gönder
+                        {/* 🚀 YENİ: Dosya Yükleme Alanı */}
+                        <div style={{ padding: '10px', backgroundColor: '#e2e8f0', borderRadius: '6px', border: '1px dashed #94a3b8' }}>
+                            <label style={{ display: 'block', fontSize: '14px', fontWeight: 'bold', marginBottom: '5px' }}>
+                                📎 Dosya Ekle (İsteğe Bağlı)
+                            </label>
+                            <input
+                                type="file"
+                                onChange={e => setSelectedFile(e.target.files ? e.target.files[0] : null)}
+                                style={{ fontSize: '14px', width: '100%' }}
+                            />
+                            <p style={{ fontSize: '12px', color: '#64748b', margin: '5px 0 0 0' }}>PDF, Word veya Resim formatında dosyalar yükleyebilirsiniz.</p>
+                        </div>
+
+                        <button type="submit" style={{ padding: '12px', backgroundColor: '#0056b3', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', marginTop: '10px' }}>
+                            Gönder 🚀
                         </button>
 
-                        {message && <div style={{ marginTop: '10px', fontWeight: 'bold', color: message.includes('✅') ? 'green' : 'red' }}>{message}</div>}
+                        {message && <div style={{ marginTop: '10px', fontWeight: 'bold', padding: '10px', borderRadius: '4px', backgroundColor: message.includes('✅') ? '#dcfce7' : '#fee2e2', color: message.includes('✅') ? '#166534' : '#991b1b' }}>{message}</div>}
                     </form>
                 </div>
 
                 {/* SAĞ TARAF: Profil Özeti */}
-                <div style={{ flex: 1, padding: '20px', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px', height: 'fit-content' }}>
-                    <h3>Profil Bilgileri</h3>
+                <div style={{ flex: 1, padding: '20px', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px', height: 'fit-content', minWidth: '250px' }}>
+                    <h3 style={{ marginTop: 0 }}>Profil Bilgileri</h3>
                     <p><strong>Branş:</strong> {profile?.branch}</p>
                     <p><strong>Sınıflarım:</strong></p>
-                    <ul>
+                    <ul style={{ paddingLeft: '20px' }}>
                         {profile?.homeroomClasses?.map(c => (
-                            <li key={c.id}>{c.name}</li>
+                            <li key={c.id} style={{ marginBottom: '5px' }}>{c.name}</li>
                         ))}
+                        {(!profile?.homeroomClasses || profile.homeroomClasses.length === 0) && (
+                            <li style={{ color: '#94a3b8', listStyleType: 'none', marginLeft: '-20px' }}>Henüz sınıf atanmamış.</li>
+                        )}
                     </ul>
                 </div>
             </div>

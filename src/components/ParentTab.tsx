@@ -6,6 +6,8 @@ interface Parent {
     id: number;
     firstName: string;
     lastName: string;
+    email: string;       // 🚀 EKLENDİ
+    phoneNumber: string; // 🚀 EKLENDİ
 }
 
 interface Student {
@@ -23,7 +25,14 @@ export default function ParentTab() {
     const [parents, setParents] = useState<Parent[]>([]);
     const [loading, setLoading] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [parentForm, setParentForm] = useState({ firstName: '', lastName: '' });
+
+    // 🚀 GÜNCELLENDİ: E-posta ve telefon state'e dahil edildi
+    const [parentForm, setParentForm] = useState({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phoneNumber: ''
+    });
 
     // --- DETAY EKRANI STATE'LERİ ---
     const [selectedParent, setSelectedParent] = useState<Parent | null>(null);
@@ -56,7 +65,6 @@ export default function ParentTab() {
     const fetchParentStudents = async (parentId: number) => {
         try {
             const response = await api.get('/students/list');
-            // Gelen tüm öğrencilerden, sadece bu veliye (parentId) ait olanları ayıkla
             const filtered = response.data.filter((s: Student) => s.parentId === parentId);
             setParentStudents(filtered);
         } catch (error) {
@@ -71,10 +79,11 @@ export default function ParentTab() {
             await api.post('/parents', parentForm);
             alert("Veli başarıyla eklendi! 👨‍👩‍👧");
             setIsCreateModalOpen(false);
-            setParentForm({ firstName: '', lastName: '' });
+            // 🚀 GÜNCELLENDİ: Form temizlenirken yeni alanlar da sıfırlanıyor
+            setParentForm({ firstName: '', lastName: '', email: '', phoneNumber: '' });
             fetchParents();
         } catch (error) {
-            alert("Veli eklenirken hata oluştu.");
+            alert("Veli eklenirken hata oluştu. (E-posta veya telefon eksik olabilir)");
         }
     };
 
@@ -85,7 +94,14 @@ export default function ParentTab() {
             await api.put(`/parents/${selectedParent.id}`, parentForm);
             alert("Veli bilgileri güncellendi! ✅");
             fetchParents();
-            setSelectedParent({ ...selectedParent, firstName: parentForm.firstName, lastName: parentForm.lastName });
+            // 🚀 GÜNCELLENDİ: Seçili velinin yeni bilgileri ekrana yansıtılıyor
+            setSelectedParent({
+                ...selectedParent,
+                firstName: parentForm.firstName,
+                lastName: parentForm.lastName,
+                email: parentForm.email,
+                phoneNumber: parentForm.phoneNumber
+            });
         } catch (error) {
             alert("Güncelleme başarısız!");
         }
@@ -132,12 +148,12 @@ export default function ParentTab() {
         try {
             const payload = {
                 ...studentForm,
-                parentId: selectedParent.id // Öğrencinin veli bağını koruyoruz
+                parentId: selectedParent.id
             };
             await api.put(`/students/${editStudentId}`, payload);
             alert("Öğrenci başarıyla güncellendi! 🎓");
             setIsStudentEditModalOpen(false);
-            fetchParentStudents(selectedParent.id); // Tabloyu yenile
+            fetchParentStudents(selectedParent.id);
         } catch (error) {
             alert("Öğrenci güncellenirken hata oluştu!");
         }
@@ -146,7 +162,13 @@ export default function ParentTab() {
     // --- DETAYA GİRİŞ ---
     const handleRowClick = (parent: Parent) => {
         setSelectedParent(parent);
-        setParentForm({ firstName: parent.firstName, lastName: parent.lastName });
+        // 🚀 GÜNCELLENDİ: Tıklanan velinin e-posta ve telefonu forma dolduruluyor
+        setParentForm({
+            firstName: parent.firstName,
+            lastName: parent.lastName,
+            email: parent.email || '',
+            phoneNumber: parent.phoneNumber || ''
+        });
         fetchParentStudents(parent.id);
     };
 
@@ -168,14 +190,25 @@ export default function ParentTab() {
                 <div style={{ backgroundColor: '#f8fafc', padding: '25px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '30px' }}>
                     <h3 style={{ marginTop: 0, color: '#3b82f6', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px' }}>⚙️ Veli Bilgilerini Güncelle</h3>
                     <form onSubmit={handleUpdateParent} style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'flex-end' }}>
-                        <div style={{ flex: 1, minWidth: '200px' }}>
+                        <div style={{ flex: 1, minWidth: '150px' }}>
                             <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#475569' }}>Ad</label>
                             <input type="text" value={parentForm.firstName} onChange={e => setParentForm({...parentForm, firstName: e.target.value})} style={inputStyle} required />
                         </div>
-                        <div style={{ flex: 1, minWidth: '200px' }}>
+                        <div style={{ flex: 1, minWidth: '150px' }}>
                             <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#475569' }}>Soyad</label>
                             <input type="text" value={parentForm.lastName} onChange={e => setParentForm({...parentForm, lastName: e.target.value})} style={inputStyle} required />
                         </div>
+
+                        {/* 🚀 YENİ EKLENEN ALANLAR (DETAY EKRANI) */}
+                        <div style={{ flex: 1, minWidth: '200px' }}>
+                            <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#475569' }}>E-Posta</label>
+                            <input type="email" value={parentForm.email} onChange={e => setParentForm({...parentForm, email: e.target.value})} style={inputStyle} required />
+                        </div>
+                        <div style={{ flex: 1, minWidth: '150px' }}>
+                            <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#475569' }}>Telefon</label>
+                            <input type="text" value={parentForm.phoneNumber} onChange={e => setParentForm({...parentForm, phoneNumber: e.target.value})} style={inputStyle} required />
+                        </div>
+
                         <div style={{ display: 'flex', gap: '10px' }}>
                             <button type="submit" style={{ padding: '12px 20px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>💾 Kaydet</button>
                             <button type="button" onClick={handleDeleteParent} style={{ padding: '12px 20px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>🗑️ Veliyi Sil</button>
@@ -262,6 +295,7 @@ export default function ParentTab() {
                         <tr>
                             <th style={{ padding: '14px', borderBottom: '2px solid #cbd5e1' }}>ID</th>
                             <th style={{ padding: '14px', borderBottom: '2px solid #cbd5e1' }}>Ad Soyad</th>
+                            <th style={{ padding: '14px', borderBottom: '2px solid #cbd5e1' }}>E-Posta</th>
                             <th style={{ padding: '14px', borderBottom: '2px solid #cbd5e1', textAlign: 'center' }}>İşlem</th>
                         </tr>
                         </thead>
@@ -276,6 +310,7 @@ export default function ParentTab() {
                             >
                                 <td style={{ padding: '14px', fontWeight: 'bold', color: '#64748b' }}>#{parent.id}</td>
                                 <td style={{ padding: '14px', fontWeight: '500' }}>{parent.firstName} {parent.lastName}</td>
+                                <td style={{ padding: '14px', color: '#64748b' }}>{parent.email}</td>
                                 <td style={{ padding: '14px', textAlign: 'center' }}>
                                         <span style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '13px' }}>
                                             Detay & Öğrenciler ➡️
@@ -284,7 +319,7 @@ export default function ParentTab() {
                             </tr>
                         ))}
                         {parents.length === 0 && (
-                            <tr><td colSpan={3} style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>Henüz veli bulunamadı.</td></tr>
+                            <tr><td colSpan={4} style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>Henüz veli bulunamadı.</td></tr>
                         )}
                         </tbody>
                     </table>
@@ -299,6 +334,11 @@ export default function ParentTab() {
                         <form onSubmit={handleCreateParent} style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px' }}>
                             <input type="text" placeholder="Ad" required value={parentForm.firstName} onChange={e => setParentForm({...parentForm, firstName: e.target.value})} style={inputStyle} />
                             <input type="text" placeholder="Soyad" required value={parentForm.lastName} onChange={e => setParentForm({...parentForm, lastName: e.target.value})} style={inputStyle} />
+
+                            {/* 🚀 YENİ EKLENEN ALANLAR (MODAL EKRANI) */}
+                            <input type="email" placeholder="E-Posta Adresi" required value={parentForm.email} onChange={e => setParentForm({...parentForm, email: e.target.value})} style={inputStyle} />
+                            <input type="text" placeholder="Telefon Numarası" required value={parentForm.phoneNumber} onChange={e => setParentForm({...parentForm, phoneNumber: e.target.value})} style={inputStyle} />
+
                             <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                                 <button type="button" onClick={() => setIsCreateModalOpen(false)} style={{ flex: 1, padding: '12px', backgroundColor: '#94a3b8', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>İptal</button>
                                 <button type="submit" style={{ flex: 2, padding: '12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Veliyi Kaydet</button>

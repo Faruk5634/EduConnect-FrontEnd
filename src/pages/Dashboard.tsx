@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import Navbar from '../components/Navbar';
+import DashboardTab from '../components/DashboardTab'; // 🚀 EKLENDİ
 import StudentTab from '../components/StudentTab';
 import TeacherTab from '../components/TeacherTab';
 import ClassroomTab from '../components/ClassroomTab';
 import ParentTab from '../components/ParentTab';
+import AnnouncementTab from '../components/AnnouncementTab';
 
 export default function Dashboard() {
-    const [activeTab, setActiveTab] = useState('students');
+    // 🚀 GÜNCELLENDİ: Sisteme ilk girişte ana sayfa (dashboard) açık gelsin
+    const [activeTab, setActiveTab] = useState('dashboard');
 
     return (
         <div style={{ backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
@@ -19,6 +22,12 @@ export default function Dashboard() {
 
                 {/* YÖNETİM SEKMELERİ */}
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', marginTop: '25px', overflowX: 'auto', paddingBottom: '10px' }}>
+
+                    {/* 🚀 EKLENDİ: Ana Sayfa Butonu (En başa) */}
+                    <button onClick={() => setActiveTab('dashboard')} style={tabStyle(activeTab === 'dashboard')}>
+                        ⚓ Kaptan Köşkü
+                    </button>
+
                     <button onClick={() => setActiveTab('students')} style={tabStyle(activeTab === 'students')}>
                         🎓 Öğrenciler
                     </button>
@@ -31,14 +40,19 @@ export default function Dashboard() {
                     <button onClick={() => setActiveTab('classes')} style={tabStyle(activeTab === 'classes')}>
                         🏫 Sınıflar
                     </button>
+                    <button onClick={() => setActiveTab('announcements')} style={tabStyle(activeTab === 'announcements')}>
+                        📢 Duyurular
+                    </button>
                 </div>
 
                 {/* İÇERİK EKRANI (Hangi Sekme Seçiliyse O Gelecek) */}
                 <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}>
+                    {activeTab === 'dashboard' && <DashboardTab />} {/* 🚀 EKLENDİ */}
                     {activeTab === 'students' && <StudentTab />}
                     {activeTab === 'parents' && <ParentTab />}
                     {activeTab === 'teachers' && <TeacherTab />}
                     {activeTab === 'classes' && <ClassroomTab />}
+                    {activeTab === 'announcements' && <AnnouncementTab />}
                 </div>
             </div>
         </div>
@@ -58,4 +72,3 @@ const tabStyle = (isActive: boolean) => ({
     transition: 'all 0.2s ease',
     whiteSpace: 'nowrap' as const
 });
-
