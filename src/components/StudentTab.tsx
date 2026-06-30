@@ -1,252 +1,234 @@
-import React, { useEffect, useState } from 'react';
-import { api } from '../services/api';
-import type { Student } from '../types/student';
-import type { Parent } from '../types/parent';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
-// 🚀 YENİ: Sınıf verilerini karşılamak için geçici bir tip tanımı
-interface Classroom {
+// 📦 Backend'den gelen StudentDTO kalıbı
+interface Student {
     id: number;
-    name: string;
-    gradeLevel: number;
+    firstName: string;
+    lastName: string;
+    schoolNumber: string;
+    grade: string;
+    parentFullName: string;
+    username: string;
 }
 
-export default function StudentTab() {
+const StudentTab: React.FC = () => {
     const [students, setStudents] = useState<Student[]>([]);
-    const [parents, setParents] = useState<Parent[]>([]);
-    const [classrooms, setClassrooms] = useState<Classroom[]>([]); // 🚀 YENİ: Sınıfları tutacağımız state
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
+    // 🚪 Modal (Açılır Pencere) Kontrolleri
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [editId, setEditId] = useState<number | null>(null);
-
-    const [studentForm, setStudentForm] = useState({
-        username: '', password: '', schoolNumber: '', grade: '',
-        firstName: '', lastName: '', parentId: ''
+    const [formData, setFormData] = useState({
+        firstName: '',
+        lastName: '',
+        schoolNumber: '',
+        grade: '',
+        username: '',
+        password: ''
     });
 
+    // ⚓ Sayfa açıldığı an Axios kuryesini gönderiyoruz
     useEffect(() => {
         fetchStudents();
-        fetchParents();
-        fetchClassrooms(); // 🚀 YENİ: Sayfa açıldığında sınıfları da çek
     }, []);
 
     const fetchStudents = async () => {
-        setLoading(true);
         try {
-            const response = await api.get('/students/list');
+            const token = localStorage.getItem('token') || localStorage.getItem('jwtToken');
+            const response = await axios.get('http://localhost:8080/api/students/list', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
             setStudents(response.data);
-        } catch (error) {
-            console.error("Öğrenciler çekilemedi:", error);
-        } finally {
+            setLoading(false);
+        } catch (err) {
+            console.error("Öğrenci verileri çekilemedi:", err);
+            setError("Makine dairesine (sunucuya) ulaşılamadı veya yetkiniz yok.");
             setLoading(false);
         }
     };
 
-    const fetchParents = async () => {
-        try {
-            const response = await api.get('/parents');
-            setParents(response.data);
-        } catch (error) {
-            console.error("Veliler çekilemedi:", error);
+    // 🗑️ Öğrenci Silme Motoru
+    const handleDelete = async (id: number, name: string) => {
+        if (window.confirm(`Kaptan, ${name} adlı öğrenciyi sistemden silmek istediğine emin misin?`)) {
+            try {
+                const token = localStorage.getItem('token') || localStorage.getItem('jwtToken');
+                await axios.delete(`http://localhost:8080/api/students/${id}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                // Silme başarılıysa listeyi güncelle
+                setStudents(students.filter(student => student.id !== id));
+            } catch (err) {
+                console.error("Silme işlemi başarısız:", err);
+                alert("Silme işlemi sırasında bir hata oluştu!");
+            }
         }
     };
 
-    // 🚀 YENİ: Backend'den Sınıfları Çeken Fonksiyon
-    const fetchClassrooms = async () => {
-        try {
-            const response = await api.get('/classrooms');
-            setClassrooms(response.data);
-        } catch (error) {
-            console.error("Sınıflar çekilemedi:", error);
-        }
-    };
-
-    const handleSearch = async () => {
-        if (!searchTerm.trim()) {
-            fetchStudents();
-            return;
-        }
-        try {
-            setLoading(true);
-            const response = await api.get(`/students/search?firstName=${searchTerm}`);
-            setStudents(response.data);
-        } catch (error) {
-            console.error("Arama başarısız:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // 📝 Yeni Öğrenci Ekleme Motoru
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const payload = {
-                username: studentForm.username,
-                password: studentForm.password,
-                schoolNumber: studentForm.schoolNumber,
-                grade: studentForm.grade, // 🚀 Backend'e seçilen sınıfın adını (Örn: "10-A") gönderiyoruz
-                firstName: studentForm.firstName,
-                lastName: studentForm.lastName,
-                parentId: studentForm.parentId ? Number(studentForm.parentId) : null
-            };
+            const token = localStorage.getItem('token') || localStorage.getItem('jwtToken');
 
-            if (editId) {
-                await api.put(`/students/${editId}`, payload);
-                alert("Öğrenci başarıyla güncellendi! ✏️");
-            } else {
-                await api.post('/students/create', payload);
-                alert("Öğrenci başarıyla eklendi! 🎓");
-            }
+            // Backend'deki createStudentWithUser uç noktasına veriyi gönderiyoruz
+            await axios.post('http://localhost:8080/api/students/create', formData, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
 
-            closeModal();
+            // Başarılıysa modalı kapat, formu temizle ve listeyi yenile
+            setIsModalOpen(false);
+            setFormData({ firstName: '', lastName: '', schoolNumber: '', grade: '', username: '', password: '' });
+            setLoading(true);
             fetchStudents();
-        } catch (error) {
-            alert("İşlem başarısız! Kullanıcı adı veya okul no kullanılıyor olabilir.");
+
+        } catch (err) {
+            console.error("Kayıt sızıntısı:", err);
+            alert("Öğrenci eklenirken hata oluştu! Kullanıcı adı veya okul numarası zaten kullanılıyor olabilir.");
         }
     };
 
-    const handleEditClick = (student: Student) => {
-        setEditId(student.id);
-        setStudentForm({
-            username: student.username || '',
-            password: '',
-            schoolNumber: student.schoolNumber,
-            grade: student.grade || '',
-            firstName: student.firstName,
-            lastName: student.lastName,
-            parentId: student.parentId ? student.parentId.toString() : ''
-        });
-        setIsModalOpen(true);
-    };
-
-    const handleDeleteStudent = async (id: number) => {
-        if (!window.confirm("Bu öğrenciyi silmek istediğinize emin misiniz?")) return;
-        try {
-            await api.delete(`/students/${id}`);
-            setStudents(students.filter(s => s.id !== id));
-        } catch (error) {
-            alert("Silme işlemi başarısız!");
-        }
-    };
-
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setEditId(null);
-        setStudentForm({ username: '', password: '', schoolNumber: '', grade: '', firstName: '', lastName: '', parentId: '' });
-    };
+    // ⏳ Yükleme Ekranı
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                <p className="text-slate-500 font-medium">📡 Makine dairesinden veriler çekiliyor...</p>
+            </div>
+        );
+    }
 
     return (
-        <div>
-            {/* ÜST BAR: Arama Çubuğu ve Yeni Ekle Butonu */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <input
-                        type="text"
-                        placeholder="İsme Göre Ara..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', width: '250px' }}
-                    />
-                    <button onClick={handleSearch} style={{ padding: '10px 20px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                        🔍 Ara
-                    </button>
+        <div className="animate-fade-in-down relative">
+
+            {/* 🚨 Hata Mesajı */}
+            {error && <div className="mb-4 p-4 text-red-500 font-medium bg-red-50 border border-red-200 rounded-xl">{error}</div>}
+
+            {/* 🏛️ Üst Bar */}
+            <div className="flex justify-between items-center mb-8">
+                <div>
+                    <h2 className="text-2xl font-extrabold text-slate-800">Öğrenci Yönetimi</h2>
+                    <p className="text-slate-500 text-sm mt-1">Veritabanındaki tüm öğrenciler burada listelenir.</p>
                 </div>
-                <button onClick={() => setIsModalOpen(true)} style={{ padding: '10px 20px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                    ➕ Yeni Öğrenci Ekle
+                <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-600/30 transition-all flex items-center gap-2 transform hover:-translate-y-0.5"
+                >
+                    <span className="text-lg">➕</span> Yeni Öğrenci
                 </button>
             </div>
 
-            {/* TABLO */}
-            {loading ? (
-                <p style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>📡 Makine dairesinden veriler çekiliyor...</p>
-            ) : (
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                        <thead style={{ backgroundColor: '#1e293b', color: 'white' }}>
-                        <tr>
-                            <th style={{ padding: '14px', borderBottom: '2px solid #cbd5e1' }}>Okul No</th>
-                            <th style={{ padding: '14px', borderBottom: '2px solid #cbd5e1' }}>Ad Soyad</th>
-                            <th style={{ padding: '14px', borderBottom: '2px solid #cbd5e1' }}>Sınıf</th>
-                            <th style={{ padding: '14px', borderBottom: '2px solid #cbd5e1' }}>Veli</th>
-                            <th style={{ padding: '14px', borderBottom: '2px solid #cbd5e1', textAlign: 'center' }}>İşlemler</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {students.map((student) => (
-                            <tr key={student.id} style={{ borderBottom: '1px solid #e2e8f0', transition: 'background-color 0.2s' }}>
-                                <td style={{ padding: '14px' }}>{student.schoolNumber}</td>
-                                <td style={{ padding: '14px', fontWeight: '500' }}>{student.firstName} {student.lastName}</td>
-                                <td style={{ padding: '14px' }}>{student.grade || '-'}</td>
-                                <td style={{ padding: '14px', color: '#64748b' }}>{student.parentFullName || 'Atanmadı'}</td>
-                                <td style={{ padding: '14px', textAlign: 'center' }}>
-                                    <button onClick={() => handleEditClick(student)} style={{ marginRight: '8px', padding: '8px 12px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-                                        ✏️
-                                    </button>
-                                    <button onClick={() => handleDeleteStudent(student.id)} style={{ padding: '8px 12px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-                                        🗑️
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                        {students.length === 0 && (
-                            <tr><td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>Henüz öğrenci bulunamadı.</td></tr>
-                        )}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-
-            {/* AÇILIR PENCERE (MODAL) FORM */}
-            {isModalOpen && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
-                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', width: '100%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
-                        <h3 style={{ marginTop: 0, borderBottom: '2px solid #f1f5f9', paddingBottom: '15px', color: '#1e293b' }}>
-                            {editId ? '✏️ Öğrenci Düzenle' : '➕ Yeni Öğrenci Ekle'}
-                        </h3>
-
-                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px' }}>
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                <input type="text" placeholder="Ad" required value={studentForm.firstName} onChange={e => setStudentForm({...studentForm, firstName: e.target.value})} style={inputStyle} />
-                                <input type="text" placeholder="Soyad" required value={studentForm.lastName} onChange={e => setStudentForm({...studentForm, lastName: e.target.value})} style={inputStyle} />
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                <input type="text" placeholder="Okul No" required value={studentForm.schoolNumber} onChange={e => setStudentForm({...studentForm, schoolNumber: e.target.value})} style={inputStyle} />
-
-                                {/* 🚀 YENİ: Manuel giriş yerine Açılır Menü (Select) */}
-                                <select
-                                    required
-                                    value={studentForm.grade}
-                                    onChange={e => setStudentForm({...studentForm, grade: e.target.value})}
-                                    style={inputStyle}
+            {/* 📊 Veri Tablosu */}
+            <div className="overflow-x-auto bg-white border border-slate-200 rounded-2xl shadow-sm">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                    <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
+                        <th className="p-5 font-bold rounded-tl-2xl">Okul No</th>
+                        <th className="p-5 font-bold">Ad Soyad</th>
+                        <th className="p-5 font-bold">Sınıf</th>
+                        <th className="p-5 font-bold">Kullanıcı Adı</th>
+                        <th className="p-5 font-bold">Veli Bilgisi</th>
+                        <th className="p-5 font-bold text-right rounded-tr-2xl">İşlemler</th>
+                    </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                    {students.map((student) => (
+                        <tr key={student.id} className="hover:bg-blue-50/50 transition-colors group">
+                            <td className="p-5 font-semibold text-slate-700">{student.schoolNumber}</td>
+                            <td className="p-5">
+                                <div className="font-bold text-slate-800">{student.firstName} {student.lastName}</div>
+                            </td>
+                            <td className="p-5">
+                  <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg text-sm font-bold border border-indigo-200">
+                    {student.grade || 'Atanmadı'}
+                  </span>
+                            </td>
+                            <td className="p-5 text-slate-500 text-sm font-medium">
+                                {student.username ? `@${student.username}` : <span className="text-slate-400 italic">Yok</span>}
+                            </td>
+                            <td className="p-5 text-slate-600 font-medium">
+                                {student.parentFullName || <span className="text-amber-500">Veli Atanmadı</span>}
+                            </td>
+                            <td className="p-5 text-right opacity-0 group-hover:opacity-100 transition-opacity flex justify-end gap-2">
+                                <button className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-semibold transition-colors">
+                                    Düzenle
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(student.id, student.firstName)}
+                                    className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg font-semibold transition-colors"
                                 >
-                                    <option value="">Sınıf Seçiniz</option>
-                                    {classrooms.map(cls => (
-                                        <option key={cls.id} value={cls.name}>{cls.name} (Derece: {cls.gradeLevel})</option>
-                                    ))}
-                                </select>
+                                    Sil
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
+
+                    {students.length === 0 && (
+                        <tr>
+                            <td colSpan={6} className="p-10 text-center text-slate-500">
+                                <div className="text-4xl mb-3">📭</div>
+                                <p className="font-medium text-lg">Sistemde henüz kayıtlı öğrenci bulunmuyor.</p>
+                            </td>
+                        </tr>
+                    )}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* 📝 YENİ ÖĞRENCİ MODALI (Açılır Pencere) */}
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+                    <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-lg border border-slate-200 transform transition-all">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-2xl font-bold text-slate-800">Yeni Öğrenci Kaydı</h3>
+                            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-red-500 text-2xl font-bold transition-colors">×</button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-600 mb-1">Ad</label>
+                                    <input type="text" required value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="Örn: Ali" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-600 mb-1">Soyad</label>
+                                    <input type="text" required value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="Örn: Yılmaz" />
+                                </div>
                             </div>
 
-                            <input type="text" placeholder="Kullanıcı Adı (Giriş İçin)" required value={studentForm.username} onChange={e => setStudentForm({...studentForm, username: e.target.value})} style={inputStyle} />
-                            {!editId && <input type="password" placeholder="Şifre" required value={studentForm.password} onChange={e => setStudentForm({...studentForm, password: e.target.value})} style={inputStyle} />}
-
-                            <select value={studentForm.parentId} onChange={e => setStudentForm({...studentForm, parentId: e.target.value})} style={inputStyle}>
-                                <option value="">Veli Seçiniz (İsteğe Bağlı)</option>
-                                {parents.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}
-                            </select>
-
-                            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                                <button type="button" onClick={closeModal} style={{ flex: 1, padding: '12px', backgroundColor: '#94a3b8', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>İptal</button>
-                                <button type="submit" style={{ flex: 2, padding: '12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>{editId ? 'Değişiklikleri Kaydet' : 'Öğrenciyi Kaydet'}</button>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-600 mb-1">Okul Numarası</label>
+                                    <input type="text" required value={formData.schoolNumber} onChange={(e) => setFormData({...formData, schoolNumber: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="Örn: 1045" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-600 mb-1">Sınıfı</label>
+                                    <input type="text" value={formData.grade} onChange={(e) => setFormData({...formData, grade: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="Örn: 10-A" />
+                                </div>
                             </div>
+
+                            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100 mt-2">
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-600 mb-1">Kullanıcı Adı</label>
+                                    <input type="text" required value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="Örn: ali.yilmaz" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-600 mb-1">Şifre</label>
+                                    <input type="password" required value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="••••••••" />
+                                </div>
+                            </div>
+
+                            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-600/30 mt-6">
+                                Öğrenciyi Sisteme Kaydet
+                            </button>
                         </form>
                     </div>
                 </div>
             )}
+
         </div>
     );
-}
+};
 
-// Girdi alanları için ortak stil
-const inputStyle = { flex: 1, padding: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px' };
+export default StudentTab;

@@ -1,162 +1,125 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { api } from '../services/api';
+import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 
-export default function LoginPage() {
+const LoginPage: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // CampusPortal'dan gelen gizli bilgileri yakalıyoruz (Eğer direkt linkle gelinirse Öğrenci varsayıyoruz)
+    const { roleTitle = 'Öğrenci', roleIcon = '🎓' } = location.state || {};
+
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    // ⚙️ Ortak Giriş Motoru
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
         try {
-            const response = await api.post('/auth/login', {
-                username: username.trim(),
-                password
+            const response = await axios.post('http://localhost:8080/api/auth/login', {
+                username: username,
+                password: password
             });
 
-            const { token, role } = response.data;
+            const token = response.data.token;
+            const role = response.data.role; // Backend'den gelen asıl rütbe (Örn: ROLE_STUDENT)
+
+            // Biletleri ambara kaldırıyoruz
             localStorage.setItem('token', token);
             localStorage.setItem('userRole', role);
 
-            if (role === 'ROLE_ADMIN') {
-                navigate('/admin');
-                return;
-            }
+            console.log(`Kaptan, ${role} olarak giriş başarılı!`);
+
+            // 🚦 Rütbeye Göre İlgili Panele Işınlama
             if (role === 'ROLE_TEACHER') {
                 navigate('/teacher');
-                return;
-            }
-            if (role === 'ROLE_PARENT') {
+            } else if (role === 'ROLE_PARENT') {
                 navigate('/parent');
-                return;
-            }
-            if (role === 'ROLE_STUDENT') {
+            } else if (role === 'ROLE_STUDENT') {
                 navigate('/student');
-                return;
+            } else {
+                // Beklenmeyen bir rütbe gelirse Liman'a geri at
+                navigate('/');
             }
 
-            setError('Kullanıcı rolü bulunamadı.');
-        } catch (err) {
-            setError('Kullanıcı adı veya şifre hatalı');
+        } catch (err: any) {
+            console.error("Giriş sızıntısı:", err);
+            setError('Giriş başarısız! Bilgilerini kontrol et Kaptan.');
         }
     };
 
     return (
-        <div style={styles.page}>
-            <div style={styles.card}>
-                <div style={styles.header}>
-                    <h1 style={styles.title}>EduConnect</h1>
-                    <p style={styles.subtitle}>Hesabınıza giriş yapın</p>
+        <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden">
+
+            {/* 🌟 Arka plan aydınlatmaları */}
+            <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-600/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            {/* 🛡️ Form Kartı */}
+            <div className="w-full max-w-md bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 p-8 rounded-3xl shadow-2xl z-10 animate-fade-in-down">
+
+                {/* Dinamik Başlık */}
+                <div className="text-center mb-8">
+                    <div className="text-6xl mb-4 transform hover:scale-110 transition-transform cursor-default">
+                        {roleIcon}
+                    </div>
+                    <h2 className="text-3xl font-bold text-white mb-2">{roleTitle} Girişi</h2>
+                    <p className="text-slate-400 text-sm">EduConnect sistemine hoş geldiniz</p>
                 </div>
 
-                <form onSubmit={handleSubmit} style={styles.form}>
-                    <label style={styles.label}>
-                        Kullanıcı Adı
+                <form onSubmit={handleLogin} className="space-y-5">
+                    {error && (
+                        <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl text-sm text-center">
+                            {error}
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="block text-slate-300 text-sm font-medium mb-2">Kullanıcı Adı</label>
                         <input
                             type="text"
-                            placeholder="örn. teacher"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            style={styles.input}
+                            className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                            placeholder="kullanici_adiniz"
                             required
                         />
-                    </label>
+                    </div>
 
-                    <label style={styles.label}>
-                        Şifre
+                    <div>
+                        <label className="block text-slate-300 text-sm font-medium mb-2">Şifre</label>
                         <input
                             type="password"
-                            placeholder="Şifrenizi girin"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            style={styles.input}
+                            className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                            placeholder="••••••••"
                             required
                         />
-                    </label>
+                    </div>
 
-                    {error && <div style={styles.error}>{error}</div>}
-
-                    <button type="submit" style={styles.button}>
+                    <button
+                        type="submit"
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition-all duration-300 shadow-lg shadow-indigo-600/30 transform hover:-translate-y-1 mt-4"
+                    >
                         Giriş Yap
                     </button>
                 </form>
+
+                <div className="mt-6 text-center border-t border-slate-700/50 pt-6">
+                    <button
+                        onClick={() => navigate('/campus')}
+                        className="text-slate-400 hover:text-white text-sm font-medium transition-colors flex items-center justify-center w-full"
+                    >
+                        <span className="mr-2">←</span> Meydana Geri Dön
+                    </button>
+                </div>
             </div>
         </div>
     );
-}
-
-const styles: Record<string, React.CSSProperties> = {
-    page: {
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #e8f0ff 0%, #f7f9ff 50%, #ffffff 100%)',
-        padding: '24px'
-    },
-    card: {
-        width: '100%',
-        maxWidth: '420px',
-        backgroundColor: '#ffffff',
-        borderRadius: '16px',
-        boxShadow: '0 20px 60px rgba(15, 23, 42, 0.15)',
-        padding: '36px'
-    },
-    header: {
-        textAlign: 'center',
-        marginBottom: '24px'
-    },
-    title: {
-        margin: 0,
-        fontSize: '28px',
-        fontWeight: 700,
-        color: '#0f172a'
-    },
-    subtitle: {
-        marginTop: '8px',
-        marginBottom: 0,
-        color: '#64748b'
-    },
-    form: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px'
-    },
-    label: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-        fontSize: '14px',
-        color: '#334155',
-        fontWeight: 600
-    },
-    input: {
-        padding: '12px 14px',
-        borderRadius: '10px',
-        border: '1px solid #e2e8f0',
-        fontSize: '15px',
-        outline: 'none'
-    },
-    error: {
-        backgroundColor: '#fee2e2',
-        color: '#b91c1c',
-        padding: '10px 12px',
-        borderRadius: '8px',
-        fontSize: '13px'
-    },
-    button: {
-        padding: '12px 16px',
-        borderRadius: '10px',
-        border: 'none',
-        backgroundColor: '#2563eb',
-        color: '#ffffff',
-        fontSize: '15px',
-        fontWeight: 700,
-        cursor: 'pointer',
-        boxShadow: '0 10px 20px rgba(37, 99, 235, 0.25)'
-    }
 };
+
+export default LoginPage;

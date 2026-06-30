@@ -10,12 +10,14 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     const token = localStorage.getItem('token');
     const userRole = localStorage.getItem('userRole');
 
+    // Eğer bilet (token) yoksa Ana Karşılama Ekranına (Liman) geri gönder
     if (!token) {
-        return <Navigate to="/login" replace />;
+        return <Navigate to="/" replace />;
     }
 
+    // Eğer bilet var ama rütbe (role) uyuşmuyorsa yine Ana Ekrana gönder
     if (allowedRoles && (!userRole || !allowedRoles.includes(userRole))) {
-        return <Navigate to="/login" replace />;
+        return <Navigate to="/" replace />;
     }
 
     return children ?? <Outlet />;
