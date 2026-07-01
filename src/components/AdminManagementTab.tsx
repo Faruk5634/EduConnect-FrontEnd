@@ -18,15 +18,23 @@ interface School {
     name: string;
 }
 
+// 📌 SAYFA MODLARI
+type ViewMode = 'list' | 'detail' | 'create' | 'edit';
+
 const AdminManagementTab: React.FC = () => {
     const [admins, setAdmins] = useState<AdminUser[]>([]);
     const [schools, setSchools] = useState<School[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // 🚪 Modal ve Detay Kontrolleri
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    // 🧭 Ekran Yönetimi
+    const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [selectedAdmin, setSelectedAdmin] = useState<AdminUser | null>(null);
-    const [isEditing, setIsEditing] = useState(false);
+
+    // 🔍 Arama ve Filtreleme Durumları
+    const [searchTerm, setSearchTerm] = useState('');
+    const [roleFilter, setRoleFilter] = useState('ALL');
+    const [schoolFilter, setSchoolFilter] = useState('ALL');
+    const [sortOrder, setSortOrder] = useState('DEFAULT');
 
     const initialFormState = {
         username: '', password: '', firstName: '', lastName: '', phone: '', email: '', role: 'ROLE_ADMIN', schoolId: ''
@@ -52,195 +60,336 @@ const AdminManagementTab: React.FC = () => {
         }
     };
 
-    // ➕ YENİ YÖNETİCİ EKLE
+    const goToList = () => {
+        setViewMode('list');
+        setSelectedAdmin(null);
+    };
+
+    const openCreate = () => {
+        setFormData(initialFormState);
+        setViewMode('create');
+    };
+
+    const openDetail = (admin: AdminUser) => {
+        setSelectedAdmin(admin);
+        setFormData({
+            username: admin.username, password: '', firstName: admin.firstName, lastName: admin.lastName,
+            phone: admin.phone, email: admin.email || '', role: admin.role, schoolId: admin.schoolId || ''
+        });
+        setViewMode('detail');
+    };
+
+    const openEdit = () => setViewMode('edit');
+
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
             const payload = { ...formData, schoolId: formData.schoolId === '' ? null : Number(formData.schoolId) };
             await axios.post('http://localhost:8080/api/superadmin/create-admin', payload, { headers: { Authorization: `Bearer ${token}` } });
-            setIsCreateModalOpen(false);
-            setFormData(initialFormState);
+            goToList();
             fetchData();
         } catch (err) { alert("Kayıt başarısız! Kullanıcı adı alınmış olabilir."); }
     };
 
-    // ✏️ YÖNETİCİ GÜNCELLE
     const handleUpdateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
             const payload = { ...formData, schoolId: formData.schoolId === '' ? null : Number(formData.schoolId) };
             await axios.put(`http://localhost:8080/api/superadmin/update-admin/${selectedAdmin?.id}`, payload, { headers: { Authorization: `Bearer ${token}` } });
-            setSelectedAdmin(null);
-            setIsEditing(false);
+
+            const updatedAdmin = { ...selectedAdmin, ...formData, schoolName: schools.find(s => s.id === Number(formData.schoolId))?.name || 'Boşta' } as AdminUser;
+            setSelectedAdmin(updatedAdmin);
+            setViewMode('detail');
             fetchData();
         } catch (err) { alert("Güncelleme başarısız oldu!"); }
     };
 
-    // 🗑️ YÖNETİCİ SİL
     const handleDelete = async (id: number) => {
         if (window.confirm("Bu yöneticiyi sistemden tamamen silmek istediğinize emin misiniz?")) {
             try {
                 const token = localStorage.getItem('token');
                 await axios.delete(`http://localhost:8080/api/superadmin/delete-admin/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-                setSelectedAdmin(null);
+                goToList();
                 fetchData();
             } catch (err) { alert("Silme işlemi başarısız!"); }
         }
     };
 
-    // Satıra tıklandığında detayları aç
-    const openDetail = (admin: AdminUser) => {
-        setSelectedAdmin(admin);
-        setIsEditing(false);
-        setFormData({
-            username: admin.username, password: '', firstName: admin.firstName, lastName: admin.lastName,
-            phone: admin.phone, email: admin.email, role: admin.role, schoolId: admin.schoolId || ''
-        });
-    };
+    // 🚀 FİLTRELEME VE SIRALAMA MOTORU
+    const filteredAdmins = admins.filter(admin => {
+        const fullName = `${admin.firstName} ${admin.lastName}`.toLowerCase();
+        const schoolName = (admin.schoolName || '').toLowerCase();
+        const searchLower = searchTerm.toLowerCase();
+
+        // 1. Arama Çubuğu Eşleşmesi (İsim veya Okul)
+        const matchesSearch = fullName.includes(searchLower) || schoolName.includes(searchLower);
+
+        // 2. Rütbe Eşleşmesi
+        const matchesRole = roleFilter === 'ALL' || admin.role === roleFilter;
+
+        // 3. Okul Eşleşmesi
+        const matchesSchool = schoolFilter === 'ALL' ||
+            (schoolFilter === 'UNASSIGNED' && admin.schoolName === 'Boşta') ||
+            admin.schoolId?.toString() === schoolFilter;
+
+        return matchesSearch && matchesRole && matchesSchool;
+    }).sort((a, b) => {
+        // 4. Sıralama (A-Z veya Z-A)
+        if (sortOrder === 'AZ') return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+        if (sortOrder === 'ZA') return `${b.firstName} ${b.lastName}`.localeCompare(`${a.firstName} ${a.lastName}`);
+        return 0; // DEFAULT
+    });
 
     if (loading) return <div className="text-center py-20 text-slate-400 font-medium animate-pulse">📡 Yönetici verileri taranıyor...</div>;
 
-    return (
-        <div className="animate-fade-in-down h-full bg-slate-100 p-6 rounded-tl-3xl">
-
-            {/* 🏛️ Üst Bar */}
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h2 className="text-2xl font-extrabold text-slate-800">Yönetici ve Atama Merkezi</h2>
-                    <p className="text-slate-500 text-sm mt-1">Yöneticilerin detaylarını görmek için listedeki satırlara tıklayın.</p>
+    // ===========================================================================
+    // 1. GÖRÜNÜM: LİSTE VE FİLTRELEME EKRANI
+    // ===========================================================================
+    if (viewMode === 'list') {
+        return (
+            <div className="animate-fade-in-down h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl">
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 className="text-2xl font-extrabold text-slate-800">Yönetici ve Atama Merkezi</h2>
+                        <p className="text-slate-500 text-sm mt-1">Yöneticilerin detaylarını görmek için listedeki satırlara tıklayın.</p>
+                    </div>
+                    <button onClick={openCreate} className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md font-bold shadow-md transition-all flex items-center gap-2 text-sm tracking-widest">
+                        <span>➕</span> YENİ YÖNETİCİ EKLE
+                    </button>
                 </div>
-                <button onClick={() => { setFormData(initialFormState); setIsCreateModalOpen(true); }} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-600/30 transition-all">
-                    <span>👨‍💼</span> Yeni Yönetici Ekle
-                </button>
-            </div>
 
-            {/* 📊 Veri Tablosu */}
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                <table className="w-full text-left border-collapse">
-                    <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
-                        <th className="p-5 font-bold">Yönetici</th>
-                        <th className="p-5 font-bold">İletişim</th>
-                        <th className="p-5 font-bold">Rütbe</th>
-                        <th className="p-5 font-bold">Görev Yeri</th>
-                    </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                    {admins.map((admin) => (
-                        <tr key={admin.id} onClick={() => openDetail(admin)} className="hover:bg-blue-50/50 transition-colors cursor-pointer group">
-                            <td className="p-5">
-                                <div className="font-bold text-slate-800">{admin.firstName} {admin.lastName}</div>
-                                <div className="text-xs text-slate-400">@{admin.username}</div>
-                            </td>
-                            <td className="p-5 text-slate-600 text-sm font-medium">{admin.phone || '-'}</td>
-                            <td className="p-5">
-                  <span className={`px-3 py-1 rounded-lg text-xs font-bold border ${admin.role === 'ROLE_ADMIN' ? 'bg-purple-50 text-purple-600 border-purple-200' : 'bg-indigo-50 text-indigo-600 border-indigo-200'}`}>
-                    {admin.role === 'ROLE_ADMIN' ? 'MÜDÜR' : 'MÜDÜR YRD.'}
-                  </span>
-                            </td>
-                            <td className="p-5 font-medium">
-                                {admin.schoolName === 'Boşta' ? (
-                                    <span className="text-amber-500 bg-amber-50 px-3 py-1 rounded-lg text-xs font-bold border border-amber-200">Boşta (Atama Bekliyor)</span>
-                                ) : <span className="text-slate-700">{admin.schoolName}</span>}
-                            </td>
+                {/* 🎛️ FİLTRE VE ARAMA ÇUBUĞU (Banka Teması) */}
+                <div className="bg-white p-4 rounded-md shadow-sm border border-slate-200 mb-6 flex flex-col lg:flex-row gap-4">
+                    <div className="flex-1">
+                        <input type="text" placeholder="İsim, Soyisim veya Kurum Adı Ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" />
+                    </div>
+                    <div className="w-full lg:w-48">
+                        <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700">
+                            <option value="ALL">Tüm Rütbeler</option>
+                            <option value="ROLE_ADMIN">Sadece Müdürler</option>
+                            <option value="ROLE_VICE_ADMIN">Sadece Müdür Yrd.</option>
+                        </select>
+                    </div>
+                    <div className="w-full lg:w-56">
+                        <select value={schoolFilter} onChange={(e) => setSchoolFilter(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700">
+                            <option value="ALL">Tüm Kurumlar</option>
+                            <option value="UNASSIGNED">Boşta Bekleyenler</option>
+                            {schools.map(s => <option key={s.id} value={s.id.toString()}>{s.name}</option>)}
+                        </select>
+                    </div>
+                    <div className="w-full lg:w-40">
+                        <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700">
+                            <option value="DEFAULT">Kayıt Sırası</option>
+                            <option value="AZ">A'dan Z'ye</option>
+                            <option value="ZA">Z'den A'ya</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* 📊 TABLO EKRANI */}
+                <div className="bg-white border border-slate-200 rounded-md shadow-sm overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider font-bold">
+                            <th className="p-5">Yönetici</th>
+                            <th className="p-5">E-Posta Adresi</th>
+                            <th className="p-5">Rütbe</th>
+                            <th className="p-5">Görev Yeri</th>
                         </tr>
-                    ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                        {filteredAdmins.length === 0 ? (
+                            <tr>
+                                <td colSpan={4} className="p-8 text-center text-slate-400 font-bold">Arama kriterlerine uygun yönetici bulunamadı.</td>
+                            </tr>
+                        ) : (
+                            filteredAdmins.map((admin) => (
+                                <tr key={admin.id} onClick={() => openDetail(admin)} className="hover:bg-blue-50/50 transition-colors cursor-pointer group">
+                                    <td className="p-5">
+                                        <div className="font-bold text-slate-800">{admin.firstName} {admin.lastName}</div>
+                                        <div className="text-xs text-slate-400 font-medium uppercase tracking-wider mt-0.5">@{admin.username}</div>
+                                    </td>
+                                    <td className="p-5 text-slate-600 text-sm font-medium">
+                                        {admin.email ? admin.email : <span className="text-slate-400 italic">Belirtilmemiş</span>}
+                                    </td>
+                                    <td className="p-5">
+                      <span className={`px-2 py-1 rounded text-[10px] font-black uppercase border tracking-widest ${admin.role === 'ROLE_ADMIN' ? 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/20' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                        {admin.role === 'ROLE_ADMIN' ? 'MÜDÜR' : 'MÜDÜR YRD.'}
+                      </span>
+                                    </td>
+                                    <td className="p-5 font-medium text-sm">
+                                        {admin.schoolName === 'Boşta' ? (
+                                            <span className="text-amber-500 bg-amber-50 px-2 py-1 rounded text-[10px] font-black uppercase border border-amber-200 tracking-widest">Boşta (Atama Bekliyor)</span>
+                                        ) : <span className="text-slate-700">{admin.schoolName}</span>}
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        );
+    }
+
+    // ===========================================================================
+    // 2. GÖRÜNÜM: DETAY & FORM EKRANI
+    // ===========================================================================
+    return (
+        <div className="animate-fade-in-right h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl">
+
+            {/* Üst Bar */}
+            <div className="flex items-center gap-4 mb-8 pb-4 border-b border-slate-200">
+                <button onClick={goToList} className="text-slate-500 hover:text-slate-900 bg-white border border-slate-300 p-2 rounded-md transition-all shadow-sm font-bold px-4 text-sm tracking-wider">
+                    GERİ DÖN
+                </button>
+                <div>
+                    <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">
+                        {viewMode === 'create' ? 'YENİ YÖNETİCİ OLUŞTUR' : viewMode === 'edit' ? 'YÖNETİCİ BİLGİLERİNİ GÜNCELLE' : 'YÖNETİCİ PROFİLİ'}
+                    </h2>
+                </div>
             </div>
 
-            {/* 📝 YENİ YÖNETİCİ VEYA DETAY/DÜZENLEME MODALI */}
-            {(isCreateModalOpen || selectedAdmin) && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-                    <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-2xl font-bold text-slate-800">
-                                {isCreateModalOpen ? 'Yeni Yönetici Oluştur' : isEditing ? 'Yöneticiyi Düzenle' : 'Yönetici Detayları'}
-                            </h3>
-                            <button onClick={() => { setIsCreateModalOpen(false); setSelectedAdmin(null); }} className="text-slate-400 hover:text-red-500 text-3xl transition-colors">&times;</button>
+            {/* 2.A - SADECE DETAY GÖRÜNÜMÜ */}
+            {viewMode === 'detail' && selectedAdmin && (
+                <div className="max-w-4xl mx-auto">
+                    <div className="bg-white rounded-md shadow-sm border border-slate-200 overflow-hidden">
+
+                        {/* Profil Üst Kısım - Lacivert Arka Plan */}
+                        <div className="bg-[#1e293b] p-8 text-white flex items-center gap-6">
+                            <div className="w-20 h-20 bg-slate-700/50 text-white rounded-md flex items-center justify-center text-3xl font-black shadow-inner border border-slate-600">
+                                {selectedAdmin.firstName.charAt(0)}{selectedAdmin.lastName.charAt(0)}
+                            </div>
+                            <div>
+                                <h3 className="text-3xl font-black">{selectedAdmin.firstName} {selectedAdmin.lastName}</h3>
+                                <div className="mt-3 inline-block">
+                  <span className={`px-3 py-1 rounded text-xs font-bold tracking-widest uppercase ${selectedAdmin.role === 'ROLE_ADMIN' ? 'bg-[#10b981] text-white' : 'bg-blue-600 text-white'}`}>
+                    {selectedAdmin.role === 'ROLE_ADMIN' ? 'OKUL MÜDÜRÜ' : 'MÜDÜR YARDIMCISI'}
+                  </span>
+                                </div>
+                            </div>
                         </div>
 
-                        <form onSubmit={isCreateModalOpen ? handleCreateSubmit : handleUpdateSubmit} className="space-y-4">
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-600 mb-1">Adı *</label>
-                                    <input type="text" required disabled={selectedAdmin && !isEditing} value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} className="w-full bg-slate-50 border rounded-xl px-4 py-3 outline-none focus:border-blue-500 disabled:opacity-70" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-600 mb-1">Soyadı *</label>
-                                    <input type="text" required disabled={selectedAdmin && !isEditing} value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} className="w-full bg-slate-50 border rounded-xl px-4 py-3 outline-none focus:border-blue-500 disabled:opacity-70" />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-600 mb-1">Telefon *</label>
-                                    <input type="text" required disabled={selectedAdmin && !isEditing} value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full bg-slate-50 border rounded-xl px-4 py-3 outline-none focus:border-blue-500 disabled:opacity-70" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-600 mb-1">E-posta (İsteğe Bağlı)</label>
-                                    <input type="email" disabled={selectedAdmin && !isEditing} value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full bg-slate-50 border rounded-xl px-4 py-3 outline-none focus:border-blue-500 disabled:opacity-70" />
+                        {/* Detaylar Kısımı */}
+                        <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">İletişim & Lokasyon</h4>
+                                <div className="space-y-4">
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-500 uppercase">Telefon</p>
+                                        <p className="text-sm font-bold text-slate-900 mt-0.5">{selectedAdmin.phone || 'Belirtilmemiş'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-500 uppercase">Kullanıcı Adı</p>
+                                        <p className="text-sm font-bold text-slate-900 mt-0.5">@{selectedAdmin.username}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-500 uppercase">Kurumsal E-Posta</p>
+                                        <p className="text-sm font-semibold text-slate-700 mt-0.5">{selectedAdmin.email || 'Belirtilmemiş'}</p>
+                                    </div>
                                 </div>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-600 mb-1">Sistem Kullanıcı Adı *</label>
-                                    <input type="text" required disabled={selectedAdmin && !isEditing} value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full bg-slate-50 border rounded-xl px-4 py-3 outline-none focus:border-blue-500 disabled:opacity-70" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-600 mb-1">
-                                        {isEditing || isCreateModalOpen ? 'Şifre (Boş bırakırsanız değişmez)' : 'Şifre (Gizli)'}
-                                    </label>
-                                    <input type="password" required={isCreateModalOpen} disabled={selectedAdmin && !isEditing} value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full bg-slate-50 border rounded-xl px-4 py-3 outline-none focus:border-blue-500 disabled:opacity-70" placeholder="••••••••" />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-600 mb-1">Rütbe Seçimi *</label>
-                                    <select required disabled={selectedAdmin && !isEditing} value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} className="w-full bg-slate-50 border rounded-xl px-4 py-3 outline-none focus:border-blue-500 disabled:opacity-70">
-                                        <option value="ROLE_ADMIN">Okul Müdürü</option>
-                                        <option value="ROLE_VICE_ADMIN">Müdür Yardımcısı</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-600 mb-1">Görev Yeri (İsteğe Bağlı)</label>
-                                    <select disabled={selectedAdmin && !isEditing} value={formData.schoolId} onChange={e => setFormData({...formData, schoolId: e.target.value})} className="w-full bg-slate-50 border rounded-xl px-4 py-3 outline-none focus:border-blue-500 disabled:opacity-70">
-                                        <option value="">-- Şimdilik Boşta Bırak --</option>
-                                        {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                    </select>
+                            <div>
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Sistem Kayıt Bilgileri</h4>
+                                <div className="space-y-4">
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-500 uppercase">Sistem Kayıt Numarası (ID)</p>
+                                        <p className="text-sm font-bold text-slate-900 mt-0.5">#{selectedAdmin.id}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-500 uppercase">Görev Yaptığı Kampüs</p>
+                                        <p className={`text-sm font-bold mt-0.5 ${selectedAdmin.schoolName === 'Boşta' ? 'text-amber-600' : 'text-slate-900'}`}>
+                                            {selectedAdmin.schoolName === 'Boşta' ? 'Şu an Atama Bekliyor (Boşta)' : selectedAdmin.schoolName}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
 
-                            {/* BUTONLAR (Duruma Göre Değişir) */}
-                            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
-                                {isCreateModalOpen ? (
-                                    <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold shadow-lg">Yöneticiyi Ekle</button>
-                                ) : (
-                                    <>
-                                        {!isEditing ? (
-                                            <>
-                                                <button type="button" onClick={() => handleDelete(selectedAdmin!.id)} className="bg-red-50 text-red-600 hover:bg-red-100 px-6 py-3 rounded-xl font-bold">Yöneticiyi Sil</button>
-                                                <button type="button" onClick={() => setIsEditing(true)} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold">Bilgileri Düzenle</button>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <button type="button" onClick={() => setIsEditing(false)} className="bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-3 rounded-xl font-bold">İptal</button>
-                                                <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold shadow-lg">Değişiklikleri Kaydet</button>
-                                            </>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-                        </form>
-
+                        {/* Aksiyon Butonları */}
+                        <div className="p-6 bg-white border-t border-slate-200 flex justify-end gap-3">
+                            <button onClick={() => handleDelete(selectedAdmin.id)} className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-6 py-2.5 rounded-md font-bold text-sm tracking-widest transition-all">
+                                SİSTEMDEN SİL
+                            </button>
+                            <button onClick={openEdit} className="bg-[#0f172a] hover:bg-blue-700 text-white px-8 py-2.5 rounded-md font-bold text-sm tracking-widest shadow-md transition-all">
+                                DÜZENLE
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
+
+            {/* 2.B - FORM GÖRÜNÜMÜ (Yeni Kayıt veya Düzenleme) */}
+            {(viewMode === 'create' || viewMode === 'edit') && (
+                <div className="max-w-3xl mx-auto bg-white p-8 md:p-10 rounded-md shadow-sm border border-slate-200">
+                    <form onSubmit={viewMode === 'create' ? handleCreateSubmit : handleUpdateSubmit} className="space-y-6">
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Adı *</label>
+                                <input type="text" required value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="Örn: Ahmet" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Soyadı *</label>
+                                <input type="text" required value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="Örn: Yılmaz" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Sistem Kullanıcı Adı *</label>
+                            <input type="text" required value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="ahmet.yilmaz" />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Telefon *</label>
+                                <input type="text" required value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="05XX XXX XX XX" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">E-posta (İsteğe Bağlı)</label>
+                                <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="ahmet@okul.com" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">
+                                {viewMode === 'edit' ? 'Şifre Güncelleme (Değiştirmek istemiyorsanız boş bırakın)' : 'Sistem Giriş Şifresi *'}
+                            </label>
+                            <input type="password" required={viewMode === 'create'} value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="••••••••" />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Rütbe Seçimi *</label>
+                                <select required value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer">
+                                    <option value="ROLE_ADMIN">Okul Müdürü</option>
+                                    <option value="ROLE_VICE_ADMIN">Müdür Yardımcısı</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Görev Yeri (İsteğe Bağlı)</label>
+                                <select value={formData.schoolId} onChange={e => setFormData({...formData, schoolId: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer">
+                                    <option value="">-- Şimdilik Atama Yapma (Boşta) --</option>
+                                    {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-slate-200">
+                            <button type="button" onClick={viewMode === 'edit' ? () => setViewMode('detail') : goToList} className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-3 rounded-md font-bold text-sm tracking-widest transition-all">
+                                İPTAL
+                            </button>
+                            <button type="submit" className="bg-blue-700 hover:bg-blue-800 text-white px-8 py-3 rounded-md font-bold text-sm tracking-widest shadow-md transition-all">
+                                {viewMode === 'create' ? 'KAYDET VE ONAYLA' : 'DEĞİŞİKLİKLERİ UYGULA'}
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            )}
+
         </div>
     );
 };

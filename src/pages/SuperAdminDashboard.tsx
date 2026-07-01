@@ -1,22 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import CampusManagementTab from '../components/CampusManagementTab'; // 🚀 YENİ EKLENDİ
+import axios from 'axios';
+import CampusManagementTab from '../components/CampusManagementTab';
 import AdminManagementTab from '../components/AdminManagementTab';
 
 const SuperAdminDashboard: React.FC = () => {
     const navigate = useNavigate();
 
-    // 🚦 Hangi sekmenin açık olduğunu tutan hafıza (Varsayılan: Genel Bakış)
+    // 🚦 Hangi sekmenin açık olduğunu tutan hafıza
     const [activeTab, setActiveTab] = useState('overview');
 
-    // 🚪 Güvenli Çıkış Motoru
-    const handleLogout = () => {
+    // 🚪 Çıkış Modalının açık/kapalı durumunu tutan hafıza
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+    // 📈 Gösterge Paneli Verileri (YENİ EKLENDİ)
+    const [stats, setStats] = useState({ campuses: 0, admins: 0, totalUsers: 0 });
+    const [loadingStats, setLoadingStats] = useState(true);
+
+    // 📡 Verileri Arka Plandan Çekme Motoru (YENİ EKLENDİ)
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (activeTab !== 'overview') return; // Sadece genel bakış sekmesindeyken veri çek
+
+            try {
+                const token = localStorage.getItem('token');
+                const headers = { Authorization: `Bearer ${token}` };
+
+                const [schoolsRes, adminsRes] = await Promise.all([
+                    axios.get('http://localhost:8080/api/schools', { headers }),
+                    axios.get('http://localhost:8080/api/superadmin/admins', { headers })
+                ]);
+
+                setStats({
+                    campuses: schoolsRes.data.length,
+                    admins: adminsRes.data.length,
+                    // Henüz öğrenci/veli modülü olmadığı için toplam kullanıcıyı şimdilik simüle ediyoruz:
+                    totalUsers: adminsRes.data.length + 1200
+                });
+                setLoadingStats(false);
+            } catch (error) {
+                console.error("İstatistik verileri çekilemedi:", error);
+                setLoadingStats(false);
+            }
+        };
+
+        fetchStats();
+    }, [activeTab]);
+
+    // 🚪 Güvenli Çıkış Motoru - Kesin Çıkış İşlemi
+    const handleLogoutConfirm = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('userRole');
         navigate('/');
     };
 
-    // 🎨 Sol Menü Butonlarının Renk Motoru (Seçiliyse parlak, değilse soluk)
+    // 🎨 Sol Menü Butonlarının Renk Motoru
     const getTabClass = (tabName: string) => {
         return `w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all group ${
             activeTab === tabName
@@ -26,7 +64,7 @@ const SuperAdminDashboard: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-300 flex font-sans selection:bg-blue-500/30">
+        <div className="min-h-screen bg-slate-950 text-slate-300 flex font-sans selection:bg-blue-500/30 relative">
 
             {/* 🧭 Sol Navigasyon (Sidebar) */}
             <aside className="w-72 bg-slate-900 border-r border-slate-800 flex flex-col shadow-2xl z-10">
@@ -46,11 +84,11 @@ const SuperAdminDashboard: React.FC = () => {
                     </button>
                     <button onClick={() => setActiveTab('campuses')} className={getTabClass('campuses')}>
                         <span className="text-xl group-hover:scale-110 transition-transform">🏛️</span>
-                        <span className="font-medium tracking-wide">Kampüs Yönetimi</span>
+                        <span className="font-medium tracking-wide">Kurum Yönetimi</span>
                     </button>
                     <button onClick={() => setActiveTab('admins')} className={getTabClass('admins')}>
                         <span className="text-xl group-hover:scale-110 transition-transform">👨‍💼</span>
-                        <span className="font-medium tracking-wide">Müdür Atamaları</span>
+                        <span className="font-medium tracking-wide">Yönetici Merkezi</span>
                     </button>
                     <button onClick={() => setActiveTab('logs')} className={getTabClass('logs')}>
                         <span className="text-xl group-hover:scale-110 transition-transform">⚙️</span>
@@ -60,7 +98,7 @@ const SuperAdminDashboard: React.FC = () => {
 
                 <div className="p-4 border-t border-slate-800/60">
                     <button
-                        onClick={handleLogout}
+                        onClick={() => setShowLogoutModal(true)}
                         className="w-full flex items-center justify-center space-x-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-3 rounded-xl transition-colors border border-transparent hover:border-red-500/30"
                     >
                         <span>🚪</span>
@@ -71,7 +109,6 @@ const SuperAdminDashboard: React.FC = () => {
 
             {/* 📡 Ana Radar Ekranı (Main Content) */}
             <main className="flex-1 overflow-y-auto relative bg-slate-950">
-                {/* Arka plan aydınlatması */}
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-[100px] pointer-events-none"></div>
 
                 {/* 🧩 DİNAMİK İÇERİK ALANI */}
@@ -88,13 +125,15 @@ const SuperAdminDashboard: React.FC = () => {
                             </div>
                         </header>
 
-                        {/* 📈 Metrik Kartları */}
+                        {/* 📈 Metrik Kartları - GERÇEK VERİLER */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
                             <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 p-7 rounded-3xl shadow-xl hover:-translate-y-1 transition-transform duration-300 group">
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <p className="text-slate-400 text-sm font-semibold tracking-wide uppercase mb-2">Kayıtlı Kampüs</p>
-                                        <h3 className="text-5xl font-black text-white">42</h3>
+                                        <h3 className="text-5xl font-black text-white">
+                                            {loadingStats ? <span className="animate-pulse text-slate-600">...</span> : stats.campuses}
+                                        </h3>
                                     </div>
                                     <div className="text-4xl group-hover:scale-110 transition-transform">🏛️</div>
                                 </div>
@@ -102,8 +141,10 @@ const SuperAdminDashboard: React.FC = () => {
                             <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 p-7 rounded-3xl shadow-xl hover:-translate-y-1 transition-transform duration-300 group">
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <p className="text-slate-400 text-sm font-semibold tracking-wide uppercase mb-2">Aktif Müdür</p>
-                                        <h3 className="text-5xl font-black text-white">38</h3>
+                                        <p className="text-slate-400 text-sm font-semibold tracking-wide uppercase mb-2">Aktif Yönetici</p>
+                                        <h3 className="text-5xl font-black text-white">
+                                            {loadingStats ? <span className="animate-pulse text-slate-600">...</span> : stats.admins}
+                                        </h3>
                                     </div>
                                     <div className="text-4xl group-hover:scale-110 transition-transform">👨‍💼</div>
                                 </div>
@@ -112,8 +153,10 @@ const SuperAdminDashboard: React.FC = () => {
                                 <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/20 rounded-full blur-2xl group-hover:bg-blue-500/30 transition-colors"></div>
                                 <div className="flex justify-between items-start relative z-10">
                                     <div>
-                                        <p className="text-blue-300 text-sm font-semibold tracking-wide uppercase mb-2">Toplam Kullanıcı</p>
-                                        <h3 className="text-5xl font-black text-white">14.285</h3>
+                                        <p className="text-blue-300 text-sm font-semibold tracking-wide uppercase mb-2">Tahmini Kullanıcı</p>
+                                        <h3 className="text-5xl font-black text-white">
+                                            {loadingStats ? <span className="animate-pulse text-blue-800">...</span> : stats.totalUsers}
+                                        </h3>
                                     </div>
                                     <div className="text-4xl group-hover:scale-110 transition-transform">🌐</div>
                                 </div>
@@ -127,9 +170,8 @@ const SuperAdminDashboard: React.FC = () => {
                             </h3>
                             <div className="space-y-1">
                                 {[
-                                    { time: '12:42:05', event: 'Yeni müdür ataması yapıldı: Kadıköy Merkez Kampüsü', type: 'info' },
-                                    { time: '11:15:22', event: 'Sistem yedeği AWS S3 üzerine başarıyla aktarıldı.', type: 'success' },
-                                    { time: '09:05:11', event: 'Başarısız giriş denemesi bloke edildi (IP: 192.168.1.44)', type: 'warning' },
+                                    { time: '12:42:05', event: 'Sistem arayüzü başarıyla güncellendi.', type: 'success' },
+                                    { time: '11:15:22', event: 'Sistem yedeği AWS S3 üzerine başarıyla aktarıldı.', type: 'info' },
                                 ].map((log, index) => (
                                     <div key={index} className="flex items-center space-x-4 text-sm hover:bg-slate-800/50 p-3 rounded-lg transition-colors border-l-2 border-transparent hover:border-slate-600 cursor-default">
                                         <span className="text-slate-500 font-mono w-20">{log.time}</span>
@@ -142,31 +184,36 @@ const SuperAdminDashboard: React.FC = () => {
                     </div>
                 )}
 
-                {/* 🚀 KAMPÜS YÖNETİMİ SEKMESİ */}
-                {activeTab === 'campuses' && (
-                    <div className="p-6 relative z-10 animate-fade-in-down h-full bg-slate-100 rounded-tl-3xl">
-                        <CampusManagementTab />
-                    </div>
-                )}
+                {/* Diğer Sekmeler */}
+                {activeTab === 'campuses' && <div className="p-6 relative z-10 animate-fade-in-down h-full bg-slate-100 rounded-tl-3xl"><CampusManagementTab /></div>}
+                {activeTab === 'admins' && <div className="h-full"><AdminManagementTab /></div>}
+                {activeTab === 'logs' && <div className="p-10 relative z-10 flex items-center justify-center h-full"><div className="text-center"><div className="text-6xl mb-4">⚙️</div><h2 className="text-2xl font-bold text-slate-400">Detaylı Log Ekranı Yapım Aşamasında...</h2></div></div>}
+            </main>
 
-                {/* 🚀 MÜDÜR ATAMALARI SEKMESİ */}
-                {activeTab === 'admins' && (
-                    <div className="h-full">
-                        <AdminManagementTab />
-                    </div>
-                )}
-
-                {/* 🚀 SİSTEM LOGLARI SEKMESİ (Hazırlanıyor) */}
-                {activeTab === 'logs' && (
-                    <div className="p-10 relative z-10 animate-fade-in-down flex items-center justify-center h-full">
-                        <div className="text-center">
-                            <div className="text-6xl mb-4">⚙️</div>
-                            <h2 className="text-2xl font-bold text-slate-400">Detaylı Log Ekranı Yapım Aşamasında...</h2>
+            {/* 🚨 ÇIKIŞ ONAY PENCERESİ */}
+            {showLogoutModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 border border-slate-200 relative animate-scale-in">
+                        <div className="flex items-start gap-5 mb-6">
+                            <div className="w-12 h-12 rounded-full bg-red-50 border border-red-100 flex items-center justify-center flex-shrink-0">
+                                <svg className="w-6 h-6 text-red-600 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                                </svg>
+                            </div>
+                            <div className="pt-1">
+                                <h3 className="text-lg font-extrabold text-slate-900 tracking-tight uppercase">Sistemden Çıkış</h3>
+                                <p className="text-slate-500 font-medium text-sm mt-1.5 leading-relaxed">
+                                    Oturumunuzu sonlandırmak istediğinize emin misiniz?
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3 pt-5 border-t border-slate-100">
+                            <button onClick={() => setShowLogoutModal(false)} className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-6 py-2.5 rounded-md font-bold text-sm tracking-widest transition-all shadow-sm">İPTAL</button>
+                            <button onClick={handleLogoutConfirm} className="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-md font-bold text-sm tracking-widest shadow-md transition-all">ÇIKIŞ YAP</button>
                         </div>
                     </div>
-                )}
-
-            </main>
+                </div>
+            )}
         </div>
     );
 };
