@@ -34,7 +34,12 @@ const LoginPage: React.FC = () => {
             console.log(`Kaptan, ${role} olarak giriş başarılı!`);
 
             // 🚦 Rütbeye Göre İlgili Panele Işınlama
-            if (role === 'ROLE_TEACHER') {
+            if (role === 'ROLE_SUPER_ADMIN') {
+                navigate('/superadmin');
+            } else if (role === 'ROLE_ADMIN' || role === 'ROLE_VICE_ADMIN') {
+                // 🚀 DÜZELTME: Müdür ve Müdür Yardımcısı aynı panele yönlendiriliyor
+                navigate('/admin');
+            } else if (role === 'ROLE_TEACHER') {
                 navigate('/teacher');
             } else if (role === 'ROLE_PARENT') {
                 navigate('/parent');

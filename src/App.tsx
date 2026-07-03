@@ -30,9 +30,9 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
 
           {/* --- GÜVENLİ LİMANLAR (Paneller) --- */}
-          {/* Yöneticiler (Super Admin ve Müdür) buraya girebilir */}
-          <Route element={<ProtectedRoute allowedRoles={['ROLE_SUPER_ADMIN', 'ROLE_ADMIN']} />}>
-            {/* 🚀 DEĞİŞİKLİK BURADA: Artık Trafik Polisi karşılıyor */}
+          {/* Yöneticiler (Super Admin, Müdür ve Müdür Yardımcısı) buraya girebilir */}
+          <Route element={<ProtectedRoute allowedRoles={['ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_VICE_ADMIN']} />}>
+            {/* 🚀 DEĞİŞİKLİK BURADA: Trafik Polisi artık yardımcıları da tanıyor */}
             <Route path="/admin" element={<AdminDashboardController />} />
           </Route>
 

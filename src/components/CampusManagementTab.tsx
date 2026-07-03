@@ -30,13 +30,23 @@ const CampusManagementTab: React.FC = () => {
     const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
 
+    // 🔍 FİLTRELEME VE SIRALAMA DURUMLARI (YENİ EKLENDİ)
+    const [searchTerm, setSearchTerm] = useState('');
+    const [typeFilter, setTypeFilter] = useState('ALL');
+    const [cityFilter, setCityFilter] = useState('ALL');
+    const [districtFilter, setDistrictFilter] = useState('ALL');
+    const [sortOrder, setSortOrder] = useState('A-Z');
+
     const initialFormState = {
         name: '', schoolType: 'HIGH_SCHOOL', phone: '', email: '',
         city: 'İstanbul', district: 'Kadıköy', neighborhood: '', address: ''
     };
     const [formData, setFormData] = useState(initialFormState);
 
-    const availableDistricts = locationData[formData.city] || [];
+    // Form için geçerli ilçeler
+    const availableDistrictsForForm = locationData[formData.city] || [];
+    // Filtre çubuğu için geçerli ilçeler
+    const availableDistrictsForFilter = cityFilter !== 'ALL' ? locationData[cityFilter] || [] : [];
 
     useEffect(() => { fetchSchools(); }, []);
 
@@ -52,6 +62,26 @@ const CampusManagementTab: React.FC = () => {
             console.error("Okullar çekilemedi:", err);
             setLoading(false);
         }
+    };
+
+    // 🚀 FİLTRELEME MOTORU (YENİ EKLENDİ)
+    const filteredAndSortedSchools = schools.filter(school => {
+        const matchesSearch = school.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesType = typeFilter === 'ALL' || school.schoolType === typeFilter;
+        const matchesCity = cityFilter === 'ALL' || school.city === cityFilter;
+        const matchesDistrict = districtFilter === 'ALL' || school.district === districtFilter;
+
+        return matchesSearch && matchesType && matchesCity && matchesDistrict;
+    }).sort((a, b) => {
+        if (sortOrder === 'A-Z') return a.name.localeCompare(b.name);
+        if (sortOrder === 'Z-A') return b.name.localeCompare(a.name);
+        return 0;
+    });
+
+    // Şehir değiştiğinde ilçeyi sıfırlama mantığı
+    const handleCityFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setCityFilter(e.target.value);
+        setDistrictFilter('ALL'); // Şehir değişirse ilçe "Tümü" olarak sıfırlanır
     };
 
     const goToList = () => {
@@ -124,30 +154,106 @@ const CampusManagementTab: React.FC = () => {
     if (viewMode === 'list') {
         return (
             <div className="animate-fade-in-down h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl">
-                <div className="flex justify-between items-center mb-8">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
                     <div>
                         <h2 className="text-2xl font-extrabold text-slate-800">Kurum Yönetimi</h2>
                         <p className="text-slate-500 text-sm mt-1">Detayları görmek için kurum kartlarına tıklayın.</p>
                     </div>
-                    <button onClick={openCreate} className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md font-bold shadow-md transition-all flex items-center gap-2 text-sm tracking-widest">
+                    <button onClick={openCreate} className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md font-bold shadow-md transition-all flex items-center gap-2 text-sm tracking-widest flex-shrink-0">
                         <span>➕</span> YENİ KURUM EKLE
                     </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {schools.map((school) => (
-                        <div key={school.id} onClick={() => openDetail(school)} className="bg-white p-6 rounded-md shadow-sm border border-slate-200 hover:border-blue-400 transition-all cursor-pointer group relative overflow-hidden">
-                            <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full blur-3xl opacity-20 ${school.schoolType === 'HIGH_SCHOOL' ? 'bg-blue-500' : 'bg-emerald-500'}`}></div>
-                            <div className="relative z-10">
-                <span className={`px-2 py-1 rounded text-[10px] font-black uppercase border tracking-widest ${school.schoolType === 'HIGH_SCHOOL' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
-                  {school.schoolType === 'HIGH_SCHOOL' ? 'LİSE' : 'İLK/ORTAOKUL'}
-                </span>
-                                <h3 className="text-lg font-bold text-slate-900 mt-3 mb-1 group-hover:text-blue-700 transition-colors">{school.name}</h3>
-                                <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide">{school.city || 'Bilinmiyor'} / {school.district || 'Bilinmiyor'}</p>
-                            </div>
-                        </div>
-                    ))}
+                {/* 🎛️ FİLTRELEME VE ARAMA KONTROL PANELİ */}
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-8 flex flex-col xl:flex-row gap-4">
+                    {/* Arama Çubuğu */}
+                    <div className="flex-1 relative">
+                        <span className="absolute left-4 top-3 text-slate-400">🔍</span>
+                        <input
+                            type="text"
+                            placeholder="Kurum adı ile ara..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-11 pr-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400"
+                        />
+                    </div>
+
+                    {/* Filtre Grubu */}
+                    <div className="flex flex-wrap md:flex-nowrap gap-3">
+                        {/* Kurum Türü */}
+                        <select
+                            value={typeFilter}
+                            onChange={(e) => setTypeFilter(e.target.value)}
+                            className="w-full md:w-36 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700"
+                        >
+                            <option value="ALL">Tüm Türler</option>
+                            <option value="HIGH_SCHOOL">Sadece Liseler</option>
+                            <option value="PRIMARY_MIDDLE_SCHOOL">İlkokul / Ortaokul</option>
+                        </select>
+
+                        {/* İl Filtresi */}
+                        <select
+                            value={cityFilter}
+                            onChange={handleCityFilterChange}
+                            className="w-full md:w-36 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700"
+                        >
+                            <option value="ALL">Tüm İller</option>
+                            {Object.keys(locationData).map(city => (
+                                <option key={city} value={city}>{city}</option>
+                            ))}
+                        </select>
+
+                        {/* İlçe Filtresi (İle Bağlı) */}
+                        <select
+                            value={districtFilter}
+                            onChange={(e) => setDistrictFilter(e.target.value)}
+                            disabled={cityFilter === 'ALL'}
+                            className={`w-full md:w-36 border rounded-lg px-3 py-2.5 text-sm font-semibold outline-none transition-all ${cityFilter === 'ALL' ? 'bg-slate-100 border-slate-100 text-slate-400 cursor-not-allowed' : 'bg-slate-50 border-slate-200 focus:bg-white focus:border-blue-700 cursor-pointer text-slate-700'}`}
+                        >
+                            <option value="ALL">Tüm İlçeler</option>
+                            {availableDistrictsForFilter.map(dist => (
+                                <option key={dist} value={dist}>{dist}</option>
+                            ))}
+                        </select>
+
+                        {/* Sıralama */}
+                        <select
+                            value={sortOrder}
+                            onChange={(e) => setSortOrder(e.target.value)}
+                            className="w-full md:w-36 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700"
+                        >
+                            <option value="A-Z">İsim (A - Z)</option>
+                            <option value="Z-A">İsim (Z - A)</option>
+                        </select>
+                    </div>
                 </div>
+
+                {/* KARTLARIN LİSTELENMESİ */}
+                {filteredAndSortedSchools.length === 0 ? (
+                    <div className="bg-white rounded-xl border border-slate-200 py-20 text-center shadow-sm">
+                        <span className="text-5xl block mb-4">🏫</span>
+                        <h3 className="text-lg font-bold text-slate-700">Sonuç Bulunamadı</h3>
+                        <p className="text-slate-500 text-sm mt-1">Arama kriterlerinize uygun bir kurum sistemde kayıtlı değil.</p>
+                        <button onClick={() => {setSearchTerm(''); setTypeFilter('ALL'); setCityFilter('ALL'); setDistrictFilter('ALL');}} className="mt-6 text-blue-600 font-bold text-sm hover:underline">
+                            Filtreleri Temizle
+                        </button>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredAndSortedSchools.map((school) => (
+                            <div key={school.id} onClick={() => openDetail(school)} className="bg-white p-6 rounded-md shadow-sm border border-slate-200 hover:border-blue-400 transition-all cursor-pointer group relative overflow-hidden">
+                                <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full blur-3xl opacity-20 ${school.schoolType === 'HIGH_SCHOOL' ? 'bg-blue-500' : 'bg-emerald-500'}`}></div>
+                                <div className="relative z-10">
+                                    <span className={`px-2 py-1 rounded text-[10px] font-black uppercase border tracking-widest ${school.schoolType === 'HIGH_SCHOOL' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                                        {school.schoolType === 'HIGH_SCHOOL' ? 'LİSE' : 'İLK/ORTAOKUL'}
+                                    </span>
+                                    <h3 className="text-lg font-bold text-slate-900 mt-3 mb-1 group-hover:text-blue-700 transition-colors line-clamp-1" title={school.name}>{school.name}</h3>
+                                    <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide">{school.city || 'Bilinmiyor'} / {school.district || 'Bilinmiyor'}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         );
     }
@@ -179,9 +285,9 @@ const CampusManagementTab: React.FC = () => {
                             <div>
                                 <h3 className="text-3xl font-black">{selectedSchool.name}</h3>
                                 <div className="mt-3 inline-block">
-                  <span className={`px-3 py-1 rounded text-xs font-bold tracking-widest ${selectedSchool.schoolType === 'HIGH_SCHOOL' ? 'bg-blue-600' : 'bg-emerald-600'}`}>
-                    {selectedSchool.schoolType === 'HIGH_SCHOOL' ? 'LİSE' : 'İLKOKUL / ORTAOKUL'}
-                  </span>
+                                  <span className={`px-3 py-1 rounded text-xs font-bold tracking-widest ${selectedSchool.schoolType === 'HIGH_SCHOOL' ? 'bg-blue-600' : 'bg-emerald-600'}`}>
+                                    {selectedSchool.schoolType === 'HIGH_SCHOOL' ? 'LİSE' : 'İLKOKUL / ORTAOKUL'}
+                                  </span>
                                 </div>
                             </div>
                         </div>
@@ -268,7 +374,7 @@ const CampusManagementTab: React.FC = () => {
                             <div>
                                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">İlçe *</label>
                                 <select required value={formData.district} onChange={e => setFormData({...formData, district: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer">
-                                    {availableDistricts.map(dist => <option key={dist} value={dist}>{dist}</option>)}
+                                    {availableDistrictsForForm.map(dist => <option key={dist} value={dist}>{dist}</option>)}
                                 </select>
                             </div>
                         </div>

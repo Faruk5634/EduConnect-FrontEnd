@@ -3,51 +3,68 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import CampusManagementTab from '../components/CampusManagementTab';
 import AdminManagementTab from '../components/AdminManagementTab';
+import SystemLogsTab from '../components/SystemLogsTab';
+import ContactTab from '../components/ContactTab';
+import ProfileTab from '../components/ProfileTab'; // 👈 YENİ LEGO PARÇAMIZ
 
 const SuperAdminDashboard: React.FC = () => {
     const navigate = useNavigate();
 
-    // 🚦 Hangi sekmenin açık olduğunu tutan hafıza
+    // 🚦 Durum Yönetimleri
     const [activeTab, setActiveTab] = useState('overview');
-
-    // 🚪 Çıkış Modalının açık/kapalı durumunu tutan hafıza
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-    // 📈 Gösterge Paneli Verileri (YENİ EKLENDİ)
+    // Sağ üst mini rozet için basit profil datası
+    const [headerProfileName, setHeaderProfileName] = useState('Yükleniyor...');
+    const [headerProfileEmail, setHeaderProfileEmail] = useState('');
+
+    // 📈 Gösterge Paneli Verileri
     const [stats, setStats] = useState({ campuses: 0, admins: 0, totalUsers: 0 });
     const [loadingStats, setLoadingStats] = useState(true);
 
-    // 📡 Verileri Arka Plandan Çekme Motoru (YENİ EKLENDİ)
+    // 🛡️ GERİ TUŞU KORUMASI (Anti-Sızıntı Motoru)
     useEffect(() => {
-        const fetchStats = async () => {
-            if (activeTab !== 'overview') return; // Sadece genel bakış sekmesindeyken veri çek
+        window.history.pushState(null, "", window.location.pathname);
+        const handlePopState = () => {
+            window.history.pushState(null, "", window.location.pathname);
+            setShowLogoutModal(true);
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
 
+    // 📡 Verileri Arka Plandan Çekme Motoru
+    useEffect(() => {
+        const fetchDashboardData = async () => {
             try {
                 const token = localStorage.getItem('token');
                 const headers = { Authorization: `Bearer ${token}` };
 
-                const [schoolsRes, adminsRes] = await Promise.all([
-                    axios.get('http://localhost:8080/api/schools', { headers }),
-                    axios.get('http://localhost:8080/api/superadmin/admins', { headers })
-                ]);
+                if (activeTab === 'overview') {
+                    const [schoolsRes, adminsRes] = await Promise.all([
+                        axios.get('http://localhost:8080/api/schools', { headers }),
+                        axios.get('http://localhost:8080/api/superadmin/admins', { headers })
+                    ]);
+                    setStats({ campuses: schoolsRes.data.length, admins: adminsRes.data.length, totalUsers: adminsRes.data.length });
+                    setLoadingStats(false);
+                }
 
-                setStats({
-                    campuses: schoolsRes.data.length,
-                    admins: adminsRes.data.length,
-                    // Henüz öğrenci/veli modülü olmadığı için toplam kullanıcıyı şimdilik simüle ediyoruz:
-                    totalUsers: adminsRes.data.length + 1200
-                });
-                setLoadingStats(false);
+                try {
+                    const userRes = await axios.get('http://localhost:8080/api/users/me', { headers });
+                    setHeaderProfileName(userRes.data.name || userRes.data.username || 'Sistem Yöneticisi');
+                    setHeaderProfileEmail(userRes.data.email || 'E-posta kayıtlı değil');
+                } catch (err) {
+                    setHeaderProfileName('Süper Admin');
+                }
             } catch (error) {
-                console.error("İstatistik verileri çekilemedi:", error);
                 setLoadingStats(false);
             }
         };
-
-        fetchStats();
+        fetchDashboardData();
     }, [activeTab]);
 
-    // 🚪 Güvenli Çıkış Motoru - Kesin Çıkış İşlemi
+    // 🚪 Güvenli Çıkış Motoru
     const handleLogoutConfirm = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('userRole');
@@ -63,24 +80,27 @@ const SuperAdminDashboard: React.FC = () => {
         }`;
     };
 
+    // 🔠 İsim Baş harflerini alma
+    const getInitials = (name: string) => {
+        if (!name || name === 'Yükleniyor...') return 'SA';
+        return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    };
+
     return (
         <div className="min-h-screen bg-slate-950 text-slate-300 flex font-sans selection:bg-blue-500/30 relative">
 
             {/* 🧭 Sol Navigasyon (Sidebar) */}
             <aside className="w-72 bg-slate-900 border-r border-slate-800 flex flex-col shadow-2xl z-10">
-                <div className="p-6 border-b border-slate-800/60">
+                <div className="p-8 border-b border-slate-800/60">
                     <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500 tracking-tight">
                         EduConnect
                     </h1>
-                    <p className="text-xs text-slate-500 mt-2 uppercase tracking-[0.2em] font-semibold">
-                        Donanma Komutanlığı
-                    </p>
                 </div>
 
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                     <button onClick={() => setActiveTab('overview')} className={getTabClass('overview')}>
                         <span className="text-xl group-hover:scale-110 transition-transform">📊</span>
-                        <span className="font-semibold tracking-wide">Genel Bakış</span>
+                        <span className="font-semibold tracking-wide">Ana Sayfa</span>
                     </button>
                     <button onClick={() => setActiveTab('campuses')} className={getTabClass('campuses')}>
                         <span className="text-xl group-hover:scale-110 transition-transform">🏛️</span>
@@ -94,13 +114,22 @@ const SuperAdminDashboard: React.FC = () => {
                         <span className="text-xl group-hover:scale-110 transition-transform">⚙️</span>
                         <span className="font-medium tracking-wide">Sistem Logları</span>
                     </button>
+
+                    <div className="pt-4 mt-4 border-t border-slate-800/60">
+                        <button onClick={() => setActiveTab('profile')} className={getTabClass('profile')}>
+                            <span className="text-xl group-hover:scale-110 transition-transform">👤</span>
+                            <span className="font-medium tracking-wide">Profilim</span>
+                        </button>
+                    </div>
+
+                    <button onClick={() => setActiveTab('messages')} className={getTabClass('messages')}>
+                        <span className="text-xl group-hover:scale-110 transition-transform">✉️</span>
+                        <span className="font-medium tracking-wide">İletişim & Destek</span>
+                    </button>
                 </nav>
 
                 <div className="p-4 border-t border-slate-800/60">
-                    <button
-                        onClick={() => setShowLogoutModal(true)}
-                        className="w-full flex items-center justify-center space-x-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-3 rounded-xl transition-colors border border-transparent hover:border-red-500/30"
-                    >
+                    <button onClick={() => setShowLogoutModal(true)} className="w-full flex items-center justify-center space-x-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-3 rounded-xl transition-colors border border-transparent hover:border-red-500/30">
                         <span>🚪</span>
                         <span className="font-semibold">Güvenli Çıkış</span>
                     </button>
@@ -111,29 +140,61 @@ const SuperAdminDashboard: React.FC = () => {
             <main className="flex-1 overflow-y-auto relative bg-slate-950">
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-[100px] pointer-events-none"></div>
 
+                {/* 👤 SAĞ ÜST AÇILIR MENÜ (SADECE ANA SAYFADA GÖRÜNÜR) */}
+                {activeTab === 'overview' && (
+                    <div className="absolute top-8 right-10 z-30">
+                        {isDropdownOpen && <div className="fixed inset-0 z-20" onClick={() => setIsDropdownOpen(false)}></div>}
+                        <div className="relative z-30">
+                            <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className={`flex items-center gap-3 bg-slate-900/60 backdrop-blur-md border px-2 py-2 pr-5 rounded-full hover:bg-slate-800 transition-all shadow-lg group ${isDropdownOpen ? 'border-blue-500/50' : 'border-slate-700/50'}`}>
+                                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black shadow-inner tracking-tighter">
+                                    {getInitials(headerProfileName)}
+                                </div>
+                                <div className="text-left hidden md:block">
+                                    <p className="text-sm font-bold text-white leading-tight group-hover:text-blue-400 transition-colors">{headerProfileName}</p>
+                                    <p className="text-[10px] text-slate-400 font-bold tracking-widest mt-0.5 uppercase">Hesabım ▼</p>
+                                </div>
+                            </button>
+
+                            {isDropdownOpen && (
+                                <div className="absolute right-0 mt-3 w-56 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden animate-fade-in-down origin-top-right">
+                                    <div className="p-4 border-b border-slate-700/50 bg-slate-900/50">
+                                        <p className="text-sm font-bold text-white">{headerProfileName}</p>
+                                        <p className="text-xs text-slate-400 truncate">{headerProfileEmail}</p>
+                                    </div>
+                                    <div className="py-2">
+                                        <button onClick={() => { setIsDropdownOpen(false); setActiveTab('profile'); }} className="w-full text-left px-5 py-2.5 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 transition-colors flex items-center gap-3">
+                                            <span>👤</span> Profili Görüntüle
+                                        </button>
+                                        <button onClick={() => { setIsDropdownOpen(false); setActiveTab('messages'); }} className="w-full text-left px-5 py-2.5 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 transition-colors flex items-center gap-3">
+                                            <span>✉️</span> İletişim & Destek
+                                        </button>
+                                    </div>
+                                    <div className="py-2 border-t border-slate-700/50">
+                                        <button onClick={() => { setIsDropdownOpen(false); setShowLogoutModal(true); }} className="w-full text-left px-5 py-2.5 text-sm font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors flex items-center gap-3">
+                                            <span>🚪</span> Sistemden Çıkış
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* 🧩 DİNAMİK İÇERİK ALANI */}
                 {activeTab === 'overview' && (
                     <div className="p-10 relative z-10 animate-fade-in-down">
                         <header className="flex justify-between items-center mb-12">
                             <div>
                                 <h2 className="text-4xl font-extrabold text-white tracking-tight">Sistem Durumu</h2>
-                                <p className="text-slate-400 mt-2 text-lg">Tüm kampüslerin canlı verileri ve sunucu sağlığı</p>
-                            </div>
-                            <div className="flex items-center space-x-3 bg-slate-900/80 backdrop-blur-md px-5 py-2.5 rounded-full border border-slate-700/50 shadow-lg">
-                                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.6)]"></div>
-                                <span className="text-sm font-semibold text-emerald-400 tracking-wide">Ana Motorlar Çevrimiçi</span>
+                                <p className="text-slate-400 mt-2 text-lg">Tüm kampüslerin canlı verileri ve genel özet</p>
                             </div>
                         </header>
-
-                        {/* 📈 Metrik Kartları - GERÇEK VERİLER */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
                             <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 p-7 rounded-3xl shadow-xl hover:-translate-y-1 transition-transform duration-300 group">
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <p className="text-slate-400 text-sm font-semibold tracking-wide uppercase mb-2">Kayıtlı Kampüs</p>
-                                        <h3 className="text-5xl font-black text-white">
-                                            {loadingStats ? <span className="animate-pulse text-slate-600">...</span> : stats.campuses}
-                                        </h3>
+                                        <h3 className="text-5xl font-black text-white">{loadingStats ? <span className="animate-pulse text-slate-600">...</span> : stats.campuses}</h3>
                                     </div>
                                     <div className="text-4xl group-hover:scale-110 transition-transform">🏛️</div>
                                 </div>
@@ -142,9 +203,7 @@ const SuperAdminDashboard: React.FC = () => {
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <p className="text-slate-400 text-sm font-semibold tracking-wide uppercase mb-2">Aktif Yönetici</p>
-                                        <h3 className="text-5xl font-black text-white">
-                                            {loadingStats ? <span className="animate-pulse text-slate-600">...</span> : stats.admins}
-                                        </h3>
+                                        <h3 className="text-5xl font-black text-white">{loadingStats ? <span className="animate-pulse text-slate-600">...</span> : stats.admins}</h3>
                                     </div>
                                     <div className="text-4xl group-hover:scale-110 transition-transform">👨‍💼</div>
                                 </div>
@@ -153,47 +212,28 @@ const SuperAdminDashboard: React.FC = () => {
                                 <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/20 rounded-full blur-2xl group-hover:bg-blue-500/30 transition-colors"></div>
                                 <div className="flex justify-between items-start relative z-10">
                                     <div>
-                                        <p className="text-blue-300 text-sm font-semibold tracking-wide uppercase mb-2">Tahmini Kullanıcı</p>
-                                        <h3 className="text-5xl font-black text-white">
-                                            {loadingStats ? <span className="animate-pulse text-blue-800">...</span> : stats.totalUsers}
-                                        </h3>
+                                        <p className="text-blue-300 text-sm font-semibold tracking-wide uppercase mb-2">Kayıtlı Kullanıcı</p>
+                                        <h3 className="text-5xl font-black text-white">{loadingStats ? <span className="animate-pulse text-blue-800">...</span> : stats.totalUsers}</h3>
                                     </div>
                                     <div className="text-4xl group-hover:scale-110 transition-transform">🌐</div>
                                 </div>
                             </div>
                         </div>
-
-                        {/* 📜 Son Sistem Logları */}
-                        <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-3xl shadow-xl p-8">
-                            <h3 className="text-2xl font-bold text-white mb-8 flex items-center gap-3">
-                                <span>📡</span> Canlı Veri Akışı
-                            </h3>
-                            <div className="space-y-1">
-                                {[
-                                    { time: '12:42:05', event: 'Sistem arayüzü başarıyla güncellendi.', type: 'success' },
-                                    { time: '11:15:22', event: 'Sistem yedeği AWS S3 üzerine başarıyla aktarıldı.', type: 'info' },
-                                ].map((log, index) => (
-                                    <div key={index} className="flex items-center space-x-4 text-sm hover:bg-slate-800/50 p-3 rounded-lg transition-colors border-l-2 border-transparent hover:border-slate-600 cursor-default">
-                                        <span className="text-slate-500 font-mono w-20">{log.time}</span>
-                                        <span className={`w-2.5 h-2.5 rounded-full ${log.type === 'info' ? 'bg-blue-500' : log.type === 'success' ? 'bg-emerald-500' : 'bg-yellow-500'}`}></span>
-                                        <span className="text-slate-300 font-medium">{log.event}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
                     </div>
                 )}
 
-                {/* Diğer Sekmeler */}
+                {/* Sekmeler */}
                 {activeTab === 'campuses' && <div className="p-6 relative z-10 animate-fade-in-down h-full bg-slate-100 rounded-tl-3xl"><CampusManagementTab /></div>}
                 {activeTab === 'admins' && <div className="h-full"><AdminManagementTab /></div>}
-                {activeTab === 'logs' && <div className="p-10 relative z-10 flex items-center justify-center h-full"><div className="text-center"><div className="text-6xl mb-4">⚙️</div><h2 className="text-2xl font-bold text-slate-400">Detaylı Log Ekranı Yapım Aşamasında...</h2></div></div>}
+                {activeTab === 'logs' && <div className="h-full"><SystemLogsTab /></div>}
+                {activeTab === 'messages' && <div className="h-full"><ContactTab /></div>}
+                {activeTab === 'profile' && <div className="h-full"><ProfileTab /></div>}
             </main>
 
             {/* 🚨 ÇIKIŞ ONAY PENCERESİ */}
             {showLogoutModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 border border-slate-200 relative animate-scale-in">
+                    <div className="bg-white rounded-md shadow-2xl w-full max-w-md p-6 border border-slate-200 relative animate-scale-in">
                         <div className="flex items-start gap-5 mb-6">
                             <div className="w-12 h-12 rounded-full bg-red-50 border border-red-100 flex items-center justify-center flex-shrink-0">
                                 <svg className="w-6 h-6 text-red-600 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -202,9 +242,7 @@ const SuperAdminDashboard: React.FC = () => {
                             </div>
                             <div className="pt-1">
                                 <h3 className="text-lg font-extrabold text-slate-900 tracking-tight uppercase">Sistemden Çıkış</h3>
-                                <p className="text-slate-500 font-medium text-sm mt-1.5 leading-relaxed">
-                                    Oturumunuzu sonlandırmak istediğinize emin misiniz?
-                                </p>
+                                <p className="text-slate-500 font-medium text-sm mt-1.5 leading-relaxed">Oturumunuzu sonlandırmak istediğinize emin misiniz?</p>
                             </div>
                         </div>
                         <div className="flex justify-end gap-3 pt-5 border-t border-slate-100">
