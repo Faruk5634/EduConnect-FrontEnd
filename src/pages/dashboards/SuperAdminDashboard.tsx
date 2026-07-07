@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import CampusManagementTab from '../components/CampusManagementTab';
-import AdminManagementTab from '../components/AdminManagementTab';
-import SystemLogsTab from '../components/SystemLogsTab';
-import ContactTab from '../components/ContactTab';
-import ProfileTab from '../components/ProfileTab'; // 👈 YENİ LEGO PARÇAMIZ
+import CampusManagementTab from '../../components/super-admin/CampusManagementTab';
+import AdminManagementTab from '../../components/super-admin/AdminManagementTab';
+import SystemLogsTab from '../../components/super-admin/SystemLogsTab';
+import ContactTab from '../../components/shared/ContactTab';
+import ProfileTab from '../../components/shared/ProfileTab'; // 👈 YENİ LEGO PARÇAMIZ
 
 const SuperAdminDashboard: React.FC = () => {
     const navigate = useNavigate();

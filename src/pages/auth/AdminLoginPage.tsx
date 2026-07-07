@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios'; // 🚀 Axios kuryemizi gemiye aldık!
+import axios from 'axios';
 
 const AdminLoginPage: React.FC = () => {
     const navigate = useNavigate();
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState(''); // 🚨 Hata mesajları için yeni kanca
+    const [error, setError] = useState('');
 
     // ⚙️ Gerçek Backend Bağlantı Motoru
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError(''); // Yeni denemede eski hatayı temizle
+        setError('');
 
         try {
             const response = await axios.post('http://localhost:8080/api/auth/login', {
@@ -21,60 +21,60 @@ const AdminLoginPage: React.FC = () => {
             });
 
             const token = response.data.token;
-            // Backend'in gönderdiği rolü al (veya şimdilik test için varsayılan ata)
-            const role = response.data.role || 'ROLE_ADMIN';
+            const role = response.data.role; // 🚀 Backend'in verdiği gerçek rütbe
 
-            // Hem bileti hem de rütbeyi (Güvenlik Görevlisinin okuyacağı isimle) kaydet!
-            localStorage.setItem('token', token);
-            localStorage.setItem('userRole', role);
+            // 🚀 GÜVENLİK KİLİDİ: Sadece Yöneticileri Gemiye Al!
+            if (role === 'ROLE_SUPER_ADMIN' || role === 'ROLE_ADMIN' || role === 'ROLE_VICE_ADMIN') {
 
-            console.log("Kaptan, giriş başarılı! Bilet ve Rütbe alındı.");
+                // Bileti ve rütbeyi kaydet
+                localStorage.setItem('token', token);
+                localStorage.setItem('userRole', role);
 
-            navigate('/admin');
+                console.log(`Kaptan, ${role} yetkisiyle giriş başarılı!`);
+                navigate('/admin');
+
+            } else {
+                // Öğrenci, Veli veya Öğretmen buraya geldiyse içeri alma!
+                setError("Bu portal sadece yöneticiler içindir. Lütfen Kampüs Portalı'nı kullanın.");
+            }
 
         } catch (err: any) {
-            console.error("Giriş sızıntısı:", err);
-            // Backend'den gelen hata mesajını yakalıyoruz
-            setError('Giriş başarısız! Kullanıcı adı veya şifre hatalı olabilir Kaptan.');
+            console.error("Giriş hatası:", err);
+            setError("Giriş başarısız! Kullanıcı adı veya şifre hatalı.");
         }
     };
 
     return (
-        <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden">
+        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+            {/* Arka Plan Efektleri */}
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl animate-pulse"></div>
+            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
 
-            <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
-            <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-slate-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-            <div className="w-full max-w-md bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 p-8 rounded-3xl shadow-2xl z-10 animate-fade-in-down">
-
+            <div className="w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/20 p-8 md:p-10 rounded-3xl shadow-2xl relative z-10">
                 <div className="text-center mb-8">
-                    <div className="text-5xl mb-4">🏛️</div>
-                    <h2 className="text-3xl font-bold text-white mb-2">Yönetim Girişi</h2>
-                    <p className="text-slate-400 text-sm">EduConnect yetkili paneline erişim</p>
+                    <div className="text-6xl mb-4 drop-shadow-lg">🏛️</div>
+                    <h2 className="text-3xl font-extrabold text-white tracking-tight">Yönetim Portalı</h2>
+                    <p className="text-blue-200/80 mt-2 text-sm font-medium tracking-wide uppercase">Güvenli Giriş Noktası</p>
                 </div>
 
-                <form onSubmit={handleLogin} className="space-y-5">
-                    {/* 🚨 Eğer hata varsa burada kırmızı bir uyarı göstereceğiz */}
-                    {error && (
-                        <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl text-sm text-center">
-                            {error}
-                        </div>
-                    )}
+                {error && (
+                    <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl mb-6 text-sm font-medium text-center">
+                        {error}
+                    </div>
+                )}
 
+                <form onSubmit={handleLogin} className="space-y-5">
                     <div>
-                        <label className="block text-slate-300 text-sm font-medium mb-2">Kullanıcı Adı</label>
                         <input
                             type="text"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-                            placeholder="manager_ali"
+                            placeholder="Sistem Kullanıcı Adı"
                             required
                         />
                     </div>
-
                     <div>
-                        <label className="block text-slate-300 text-sm font-medium mb-2">Şifre</label>
                         <input
                             type="password"
                             value={password}
