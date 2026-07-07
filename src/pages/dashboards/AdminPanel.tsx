@@ -6,6 +6,8 @@ import ClassroomTab from '../../components/school-admin/ClassroomTab';
 import TeacherTab from '../../components/school-admin/TeacherTab';
 import ParentTab from '../../components/school-admin/ParentTab';
 import AnnouncementTab from "../../components/school-admin/AnnouncementTab.tsx";
+import ProfileTab from '../../components/shared/ProfileTab';
+import ContactTab from '../../components/shared/ContactTab';
 
 
 const AdminPanel: React.FC = () => {
@@ -149,6 +151,15 @@ const AdminPanel: React.FC = () => {
                         <span className="text-xl group-hover:scale-110 transition-transform">📢</span>
                         <span className="tracking-wide">Duyurular</span>
                     </button>
+
+                    <button onClick={() => setActiveTab('messages')} className={getTabClass('messages')}>
+                        <span className="text-xl group-hover:scale-110 transition-transform">✉️</span>
+                        <span className="tracking-wide">İletişim & Destek</span>
+                    </button>
+                    <button onClick={() => setActiveTab('profile')} className={getTabClass('profile')}>
+                        <span className="text-xl group-hover:scale-110 transition-transform">👤</span>
+                        <span className="tracking-wide">Profil </span>
+                    </button>
                 </nav>
 
                 <div className="p-4 border-t border-slate-100">
@@ -267,6 +278,8 @@ const AdminPanel: React.FC = () => {
                         {activeTab === 'teachers' && <div className="h-full"><TeacherTab /></div>}
                         {activeTab === 'classes' && <div className="h-full"><ClassroomTab /></div>}
                         {activeTab === 'announcements' && <div className="h-full"><AnnouncementTab /></div>}
+                        {activeTab === 'profile' && <div className="h-full"><ProfileTab /></div>}
+                        {activeTab === 'messages' && <div className="h-full"><ContactTab /></div>}
                         {activeTab === 'profile' && <div className="text-slate-500 font-medium text-center py-20">Profil Sayfası (Buraya ProfileTab gelecek)</div>}
                     </div>
 

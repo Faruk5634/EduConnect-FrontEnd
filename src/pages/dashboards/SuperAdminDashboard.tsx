@@ -118,7 +118,7 @@ const SuperAdminDashboard: React.FC = () => {
                     <div className="pt-4 mt-4 border-t border-slate-800/60">
                         <button onClick={() => setActiveTab('profile')} className={getTabClass('profile')}>
                             <span className="text-xl group-hover:scale-110 transition-transform">👤</span>
-                            <span className="font-medium tracking-wide">Profilim</span>
+                            <span className="font-medium tracking-wide">Profil</span>
                         </button>
                     </div>
 
