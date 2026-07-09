@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
+import { api } from '../../services/api';
 
 const LoginPage: React.FC = () => {
     const navigate = useNavigate();
@@ -19,7 +19,7 @@ const LoginPage: React.FC = () => {
         setError('');
 
         try {
-            const response = await axios.post('http://localhost:8080/api/auth/login', {
+            const response = await api.post('/auth/login', {
                 username: username,
                 password: password
             });

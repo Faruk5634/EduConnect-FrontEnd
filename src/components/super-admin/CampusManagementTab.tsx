@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api } from '../../services/api';
+import { showToast } from '../../utils/toast';
 
 interface School {
     id: number;
@@ -52,10 +53,7 @@ const CampusManagementTab: React.FC = () => {
 
     const fetchSchools = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:8080/api/schools', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await api.get('/schools');
             setSchools(response.data);
             setLoading(false);
         } catch (err) {
@@ -110,39 +108,33 @@ const CampusManagementTab: React.FC = () => {
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('token');
-            await axios.post('http://localhost:8080/api/schools', formData, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.post('/schools', formData);
             goToList();
             fetchSchools();
-        } catch (err) { alert("Kurum eklenirken hata oluştu!"); }
+            showToast('Kurum başarıyla kaydedildi ✅', 'success');
+        } catch (err) { showToast("Kurum eklenirken hata oluştu!", 'error'); }
     };
 
     const handleUpdateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('token');
-            await axios.put(`http://localhost:8080/api/schools/${selectedSchool?.id}`, formData, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.put(`/schools/${selectedSchool?.id}`, formData);
             const updatedSchool = { ...selectedSchool, ...formData } as School;
             setSelectedSchool(updatedSchool);
             setViewMode('detail');
             fetchSchools();
-        } catch (err) { alert("Güncelleme başarısız oldu!"); }
+            showToast('Kurum başarıyla güncellendi ✅', 'success');
+        } catch (err) { showToast("Güncelleme başarısız oldu!", 'error'); }
     };
 
     const handleDelete = async (id: number) => {
         if (window.confirm("Bu kurumu sistemden tamamen silmek istediğinize emin misiniz?")) {
             try {
-                const token = localStorage.getItem('token');
-                await axios.delete(`http://localhost:8080/api/schools/${id}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                await api.delete(`/schools/${id}`);
                 goToList();
                 fetchSchools();
-            } catch (err) { alert("Silme işlemi başarısız!"); }
+                showToast('Kurum sistemden silindi ✅', 'success');
+            } catch (err) { showToast("Silme işlemi başarısız!", 'error'); }
         }
     };
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../../services/api';
+import { api, API_BASE } from '../../services/api';
+import { showToast } from '../../utils/toast';
 
 interface Announcement {
     id: number;
@@ -65,9 +66,11 @@ export default function AnnouncementTab() {
         if (!window.confirm("Bu duyuruyu yayından kaldırmak istediğinize emin misiniz?")) return;
         try {
             await api.delete(`/announcements/${id}`);
+            showToast('Duyuru başarıyla kaldırıldı.', 'success');
             fetchAnnouncements();
         } catch (error) {
-            alert("Duyuru kaldırılamadı!");
+            console.error(error);
+            showToast("Duyuru kaldırılamadı!", 'error');
         }
     };
 
@@ -81,13 +84,16 @@ export default function AnnouncementTab() {
         if (selectedFile) formData.append('file', selectedFile);
 
         try {
-            await api.post('/announcements/create', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+            // axios otomatik olarak multipart/form-data header'ını ve boundary'yi ayarlar
+            await api.post('/announcements/create', formData);
             setIsCreateModalOpen(false);
             setForm({ title: '', content: '', type: 'GENERAL', classroomId: '' });
             setSelectedFile(null);
+            showToast('Duyuru başarıyla yayınlandı.', 'success');
             fetchAnnouncements();
         } catch (error) {
-            alert("Duyuru yayınlanırken hata oluştu!");
+            console.error(error);
+            showToast("Duyuru yayınlanırken hata oluştu!", 'error');
         }
     };
 
@@ -179,7 +185,7 @@ export default function AnnouncementTab() {
                                             <span className="text-2xl">📎</span>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-xs font-bold text-slate-700 truncate">{ann.fileName}</p>
-                                                <a href={`http://localhost:8080${ann.fileUrl}`} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-blue-600 hover:underline uppercase tracking-wider">Dosyayı Görüntüle</a>
+                                                <a href={`${API_BASE}${ann.fileUrl}`} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-blue-600 hover:underline uppercase tracking-wider">Dosyayı Görüntüle</a>
                                             </div>
                                         </div>
                                     )}

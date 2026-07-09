@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { api } from '../../services/api';
 import CampusManagementTab from '../../components/super-admin/CampusManagementTab';
 import AdminManagementTab from '../../components/super-admin/AdminManagementTab';
 import SystemLogsTab from '../../components/super-admin/SystemLogsTab';
@@ -38,20 +38,17 @@ const SuperAdminDashboard: React.FC = () => {
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                const token = localStorage.getItem('token');
-                const headers = { Authorization: `Bearer ${token}` };
-
                 if (activeTab === 'overview') {
                     const [schoolsRes, adminsRes] = await Promise.all([
-                        axios.get('http://localhost:8080/api/schools', { headers }),
-                        axios.get('http://localhost:8080/api/superadmin/admins', { headers })
+                        api.get('/schools'),
+                        api.get('/superadmin/admins')
                     ]);
                     setStats({ campuses: schoolsRes.data.length, admins: adminsRes.data.length, totalUsers: adminsRes.data.length });
                     setLoadingStats(false);
                 }
 
                 try {
-                    const userRes = await axios.get('http://localhost:8080/api/users/me', { headers });
+                    const userRes = await api.get('/users/me');
                     setHeaderProfileName(userRes.data.name || userRes.data.username || 'Sistem Yöneticisi');
                     setHeaderProfileEmail(userRes.data.email || 'E-posta kayıtlı değil');
                 } catch (err) {
@@ -92,7 +89,7 @@ const SuperAdminDashboard: React.FC = () => {
             {/* 🧭 Sol Navigasyon (Sidebar) */}
             <aside className="w-72 bg-slate-900 border-r border-slate-800 flex flex-col shadow-2xl z-10">
                 <div className="p-8 border-b border-slate-800/60">
-                    <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500 tracking-tight">
+                    <h1 onClick={() => setActiveTab('overview')} className="text-3xl cursor-pointer font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500 tracking-tight">
                         EduConnect
                     </h1>
                 </div>
@@ -137,7 +134,7 @@ const SuperAdminDashboard: React.FC = () => {
             </aside>
 
             {/* 📡 Ana Radar Ekranı (Main Content) */}
-            <main className="flex-1 overflow-y-auto relative bg-slate-950">
+            <main className="flex-1 overflow-y-auto relative bg-slate-950 pb-20">
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-[100px] pointer-events-none"></div>
 
                 {/* 👤 SAĞ ÜST AÇILIR MENÜ (SADECE ANA SAYFADA GÖRÜNÜR) */}
@@ -189,8 +186,10 @@ const SuperAdminDashboard: React.FC = () => {
                                 <p className="text-slate-400 mt-2 text-lg">Tüm kampüslerin canlı verileri ve genel özet</p>
                             </div>
                         </header>
+
+
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-                            <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 p-7 rounded-3xl shadow-xl hover:-translate-y-1 transition-transform duration-300 group">
+                            <div onClick={() => setActiveTab('campuses')} className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 p-7 rounded-3xl shadow-xl hover:-translate-y-1 transition-transform duration-300 group cursor-pointer">
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <p className="text-slate-400 text-sm font-semibold tracking-wide uppercase mb-2">Kayıtlı Kampüs</p>
@@ -199,7 +198,7 @@ const SuperAdminDashboard: React.FC = () => {
                                     <div className="text-4xl group-hover:scale-110 transition-transform">🏛️</div>
                                 </div>
                             </div>
-                            <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 p-7 rounded-3xl shadow-xl hover:-translate-y-1 transition-transform duration-300 group">
+                            <div onClick={() => setActiveTab('admins')} className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 p-7 rounded-3xl shadow-xl hover:-translate-y-1 transition-transform duration-300 group cursor-pointer">
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <p className="text-slate-400 text-sm font-semibold tracking-wide uppercase mb-2">Aktif Yönetici</p>
@@ -208,7 +207,7 @@ const SuperAdminDashboard: React.FC = () => {
                                     <div className="text-4xl group-hover:scale-110 transition-transform">👨‍💼</div>
                                 </div>
                             </div>
-                            <div className="bg-slate-900/80 backdrop-blur-sm border border-blue-500/30 p-7 rounded-3xl shadow-[0_0_30px_rgba(59,130,246,0.1)] hover:-translate-y-1 transition-transform duration-300 group relative overflow-hidden">
+                            <div onClick={() => setActiveTab('admins')} className="bg-slate-900/80 backdrop-blur-sm border border-blue-500/30 p-7 rounded-3xl shadow-[0_0_30px_rgba(59,130,246,0.1)] hover:-translate-y-1 transition-transform duration-300 group relative overflow-hidden cursor-pointer">
                                 <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/20 rounded-full blur-2xl group-hover:bg-blue-500/30 transition-colors"></div>
                                 <div className="flex justify-between items-start relative z-10">
                                     <div>
@@ -228,6 +227,10 @@ const SuperAdminDashboard: React.FC = () => {
                 {activeTab === 'logs' && <div className="h-full"><SystemLogsTab /></div>}
                 {activeTab === 'messages' && <div className="h-full"><ContactTab /></div>}
                 {activeTab === 'profile' && <div className="h-full"><ProfileTab /></div>}
+                {/* Footer */}
+                <footer className="w-full text-center py-6 text-slate-400 bg-slate-950/30 border-t border-slate-800/30 mt-20 fixed left-72 right-0 bottom-0">
+                    <div className="max-w-5xl mx-auto">© {new Date().getFullYear()} EduConnect — Tüm hakları saklıdır.</div>
+                </footer>
             </main>
 
             {/* 🚨 ÇIKIŞ ONAY PENCERESİ */}

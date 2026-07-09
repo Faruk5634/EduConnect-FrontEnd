@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api'; // 🚀 Axios yerine kendi API memurumuzu kullanıyoruz
+import { showToast } from '../../utils/toast';
 
 // --- ŞABLONLAR ---
 interface Student {
@@ -123,8 +124,10 @@ const StudentManagementTab: React.FC = () => {
                 await api.delete(`/students/${id}`);
                 fetchInitialData();
                 goToList();
+                showToast('Öğrenci sistemden silindi ✅', 'success');
             } catch (err) {
-                alert("Silme işlemi sırasında bir hata oluştu!");
+                console.error(err);
+                showToast("Silme işlemi sırasında bir hata oluştu!", 'error');
             }
         }
     };
@@ -136,15 +139,16 @@ const StudentManagementTab: React.FC = () => {
 
             if (selectedStudent) {
                 await api.put(`/students/${selectedStudent.id}`, payload);
-                alert('Öğrenci bilgileri güncellendi! ✅');
+                showToast('Öğrenci bilgileri güncellendi! ✅', 'success');
             } else {
                 await api.post('/students/create', payload);
-                alert('Öğrenci başarıyla kaydedildi! 🎓');
+                showToast('Öğrenci başarıyla kaydedildi! 🎓', 'success');
             }
             goToList();
             fetchInitialData();
         } catch (err: any) {
-            alert("İşlem sırasında hata oluştu! Numara veya kullanıcı adı zaten sistemde olabilir.");
+            console.error(err);
+            showToast("İşlem sırasında hata oluştu! Numara veya kullanıcı adı zaten sistemde olabilir.", 'error');
         }
     };
 

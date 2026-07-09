@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import { api } from '../../services/api';
+import { showToast } from '../../utils/toast';
 
 // --- ŞABLONLAR (INTERFACES) ---
 interface Classroom {
@@ -72,26 +73,22 @@ const ClassroomTab: React.FC = () => {
         fetchInitialData();
     }, []);
 
-    // 🔑 Yetki Anahtarı
-    const getAuthHeaders = () => {
-        const token = localStorage.getItem('token');
-        return { Authorization: `Bearer ${token}` };
-    };
+    // Not: api instance interceptor Authorization header ekler, getAuthHeaders artık gerekmiyor
 
     // --- VERİ ÇEKME İŞLEMLERİ ---
     const fetchInitialData = async () => {
         setLoading(true);
         try {
             try {
-                const userRes = await axios.get('http://localhost:8080/api/users/me', { headers: getAuthHeaders() });
+                const userRes = await api.get('/users/me');
                 setSchoolType(userRes.data.schoolType || 'HIGH_SCHOOL');
             } catch (err) {
                 console.warn("Kullanıcı türü çekilemedi.");
             }
 
             const [classRes, teacherRes] = await Promise.all([
-                axios.get('http://localhost:8080/api/classrooms', { headers: getAuthHeaders() }),
-                axios.get('http://localhost:8080/api/teachers', { headers: getAuthHeaders() })
+                api.get('/classrooms'),
+                api.get('/teachers')
             ]);
             setClassrooms(classRes.data);
             setTeachers(teacherRes.data);
@@ -104,7 +101,7 @@ const ClassroomTab: React.FC = () => {
 
     const fetchClassStudents = async (className: string) => {
         try {
-            const response = await axios.get('http://localhost:8080/api/students/list', { headers: getAuthHeaders() });
+            const response = await api.get('/students/list');
             const filtered = response.data.filter((s: Student) => s.grade === className);
             setClassStudents(filtered);
         } catch (error) {
@@ -160,39 +157,40 @@ const ClassroomTab: React.FC = () => {
         e.preventDefault();
 
         if (!generatedClassName) {
-            alert("Lütfen Kademe ve Şube seçimini eksiksiz yapın!");
-            return;
-        }
+            showToast("Lütfen Kademe ve Şube seçimini eksiksiz yapın!", 'error');
+             return;
+         }
 
         // 🛡️ ÇAKIŞMA ÖNLEYİCİ (YENİ EKLENDİ)
         // Eğer aynı isimde bir sınıf varsa VE bu sınıf şu an düzenlediğimiz sınıf değilse hata ver!
         const isDuplicate = classrooms.some(c => c.name === generatedClassName && c.id !== selectedClass?.id);
         if (isDuplicate) {
-            alert(`Kaptan, ${generatedClassName} sınıfı sistemde zaten mevcut! Lütfen farklı bir şube seçiniz.`);
-            return; // İşlemi durdur
+            showToast(`Kaptan, ${generatedClassName} sınıfı sistemde zaten mevcut! Lütfen farklı bir şube seçiniz.`, 'error');
+             return; // İşlemi durdur
         }
 
         try {
             if (selectedClass) {
-                let url = `http://localhost:8080/api/classrooms/${selectedClass.id}`;
+                let url = `/classrooms/${selectedClass.id}`;
                 if (classForm.teacherId) url += `?teacherId=${classForm.teacherId}`;
 
-                await axios.put(url, { name: generatedClassName, gradeLevel: Number(classForm.gradeLevel) }, { headers: getAuthHeaders() });
-                alert("Sınıf bilgileri başarıyla güncellendi! ✅");
+                await api.put(url, { name: generatedClassName, gradeLevel: Number(classForm.gradeLevel) });
+                showToast("Sınıf bilgileri başarıyla güncellendi! ✅", 'success');
             } else {
-                const response = await axios.post('http://localhost:8080/api/classrooms', { name: generatedClassName, gradeLevel: Number(classForm.gradeLevel) }, { headers: getAuthHeaders() });
+                const response = await api.post('/classrooms', { name: generatedClassName, gradeLevel: Number(classForm.gradeLevel) });
                 const newClassId = response.data.id;
 
                 if (classForm.teacherId) {
-                    await axios.put(`http://localhost:8080/api/classrooms/${newClassId}/teacher/${classForm.teacherId}`, {}, { headers: getAuthHeaders() });
+                    await api.put(`/classrooms/${newClassId}/teacher/${classForm.teacherId}`, {});
                 }
-                alert("Sınıf başarıyla oluşturuldu! 🏫");
+                showToast("Sınıf başarıyla oluşturuldu! 🏫", 'success');
             }
 
             goToList();
             fetchInitialData();
         } catch (error) {
-            alert("İşlem sırasında bir hata oluştu!");
+            console.error(error);
+            showToast("İşlem sırasında bir hata oluştu!", 'error');
         }
     };
 
@@ -200,21 +198,23 @@ const ClassroomTab: React.FC = () => {
         if (!selectedClass) return;
         if (!window.confirm("Bu sınıfı silmek istediğinize emin misiniz? (Öğrenciler silinmez, sadece sınıf kaydı silinir)")) return;
         try {
-            await axios.delete(`http://localhost:8080/api/classrooms/${selectedClass.id}`, { headers: getAuthHeaders() });
+            await api.delete(`/classrooms/${selectedClass.id}`);
             goToList();
             fetchInitialData();
         } catch (error) {
-            alert("Sınıf silinemedi!");
+            console.error(error);
+            showToast("Sınıf silinemedi!", 'error');
         }
     };
 
     const handleDeleteStudent = async (id: number) => {
         if (!window.confirm("Bu öğrenciyi sistemden silmek istediğinize emin misiniz?")) return;
         try {
-            await axios.delete(`http://localhost:8080/api/students/${id}`, { headers: getAuthHeaders() });
+            await api.delete(`/students/${id}`);
             setClassStudents(classStudents.filter(s => s.id !== id));
         } catch (error) {
-            alert("Öğrenci silinemedi!");
+            console.error(error);
+            showToast("Öğrenci silinemedi!", 'error');
         }
     };
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
+import { showToast } from '../../utils/toast';
 
 interface Message {
     id: number;
@@ -88,7 +89,7 @@ const ContactTab: React.FC = () => {
                 content: composeContent
             });
 
-            alert(isSuperAdmin ? 'Mesajınız iletildi!' : 'Destek talebiniz başarıyla iletildi!');
+            showToast(isSuperAdmin ? 'Mesajınız iletildi!' : 'Destek talebiniz başarıyla iletildi!', 'success');
 
             // Başarılı olursa formu temizle ve Gönderilenler kutusuna geç
             setActiveFolder('SENT');
@@ -101,7 +102,8 @@ const ContactTab: React.FC = () => {
             await fetchMessages();
 
         } catch (error) {
-            alert('Mesaj gönderilirken bir hata oluştu!');
+            console.error(error);
+            showToast('Mesaj gönderilirken bir hata oluştu!', 'error');
         }
     };
 

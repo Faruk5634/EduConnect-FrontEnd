@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../../services/api';
+import { api, API_BASE } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 
 interface ParentProfile {
@@ -36,12 +36,9 @@ export default function ParentPanel() {
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const token = localStorage.getItem('token') || localStorage.getItem('jwtToken');
-                const response = await api.get('/parents/me', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const response = await api.get('/parents/me');
                 setProfile(response.data);
-                fetchAnnouncements(token);
+                fetchAnnouncements();
             } catch (error) {
                 console.error("Veli profili çekilemedi:", error);
             } finally {
@@ -51,11 +48,9 @@ export default function ParentPanel() {
         fetchProfile();
     }, []);
 
-    const fetchAnnouncements = async (token: string | null) => {
+    const fetchAnnouncements = async () => {
         try {
-            const response = await api.get('/announcements', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await api.get('/announcements');
             const sorted = response.data.sort((a: Announcement, b: Announcement) =>
                 new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime()
             );
@@ -184,7 +179,7 @@ export default function ParentPanel() {
                                         {ann.fileUrl && (
                                             <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1', display: 'inline-block' }}>
                                                 <span style={{ marginRight: '10px', fontSize: '15px' }}>📎 <strong>Ek Dosya:</strong> {ann.fileName}</span>
-                                                <a href={`http://localhost:8080${ann.fileUrl}`} target="_blank" rel="noopener noreferrer" style={{ padding: '8px 16px', backgroundColor: '#3b82f6', color: 'white', textDecoration: 'none', borderRadius: '6px', fontWeight: 'bold', fontSize: '13px', display: 'inline-block', marginTop: '10px' }}>
+                                                <a href={`${API_BASE}${ann.fileUrl}`} target="_blank" rel="noopener noreferrer" style={{ padding: '8px 16px', backgroundColor: '#3b82f6', color: 'white', textDecoration: 'none', borderRadius: '6px', fontWeight: 'bold', fontSize: '13px', display: 'inline-block', marginTop: '10px' }}>
                                                     İndir / Görüntüle
                                                 </a>
                                             </div>

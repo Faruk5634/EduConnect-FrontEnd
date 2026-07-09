@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api } from '../../services/api';
 
 // 📌 Log Veri Modeli
 interface LogEntry {
@@ -23,11 +23,8 @@ const SystemLogsTab: React.FC = () => {
     useEffect(() => {
         const fetchLogs = async () => {
             try {
-                const token = localStorage.getItem('token');
-                // Backend log API'sine istek atılıyor
-                const response = await axios.get('http://localhost:8080/api/logs', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                // Backend log API'sine istek atılıyor (api instance interceptor Authorization ekler)
+                const response = await api.get('/logs');
 
                 // Gelen veriyi state'e aktar
                 setLogs(response.data);

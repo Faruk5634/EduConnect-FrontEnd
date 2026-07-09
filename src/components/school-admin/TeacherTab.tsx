@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
+import { showToast } from '../../utils/toast';
 
 // --- ŞABLONLAR (INTERFACES) ---
 interface ClassroomInfo {
@@ -7,18 +8,14 @@ interface ClassroomInfo {
     name: string;
 }
 
-interface UserInfo {
-    username?: string;
-    email?: string;
-    phone?: string;
-}
-
 interface Teacher {
     id: number;
     firstName: string;
     lastName: string;
     branch: string;
-    user?: UserInfo; // Backend'den gelen User bilgileri
+    username?: string;
+    phone?: string;
+    email?: string;
     homeroomClasses?: ClassroomInfo[];
 }
 
@@ -98,10 +95,10 @@ const TeacherTab: React.FC = () => {
                 firstName: selectedTeacher.firstName,
                 lastName: selectedTeacher.lastName,
                 branch: selectedTeacher.branch,
-                username: selectedTeacher.user?.username || '',
+                username: selectedTeacher.username || '',
                 password: '', // Şifre güvenlik gereği boş gelir, yazılırsa güncellenir
-                phone: selectedTeacher.user?.phone || '',
-                email: selectedTeacher.user?.email || ''
+                phone: selectedTeacher.phone || '',
+                email: selectedTeacher.email || ''
             });
             setViewMode('form');
         }
@@ -116,29 +113,28 @@ const TeacherTab: React.FC = () => {
             firstName: teacherForm.firstName,
             lastName: teacherForm.lastName,
             branch: teacherForm.branch,
-            user: {
-                username: teacherForm.username,
-                password: teacherForm.password,
-                phone: teacherForm.phone,
-                email: teacherForm.email
-            }
+            username: teacherForm.username,
+            password: teacherForm.password,
+            phone: teacherForm.phone,
+            email: teacherForm.email
         };
 
         try {
             if (selectedTeacher) {
                 // GÜNCELLEME İŞLEMİ
                 await api.put(`/teachers/${selectedTeacher.id}`, payload);
-                alert("Öğretmen bilgileri başarıyla güncellendi! ✅");
+                showToast("Öğretmen bilgileri başarıyla güncellendi! ✅", 'success');
             } else {
                 // YENİ KAYIT İŞLEMİ
                 await api.post('/teachers', payload);
-                alert("Öğretmen başarıyla sisteme kaydedildi! 👨‍🏫");
+                showToast("Öğretmen başarıyla sisteme kaydedildi! 👨‍🏫", 'success');
             }
 
             goToList();
             fetchTeachers();
         } catch (error) {
-            alert("İşlem sırasında bir hata oluştu. Kullanıcı adı zaten kullanımda olabilir!");
+            console.error(error);
+            showToast("İşlem sırasında bir hata oluştu. Kullanıcı adı zaten kullanımda olabilir!", 'error');
         }
     };
 
@@ -150,7 +146,8 @@ const TeacherTab: React.FC = () => {
             goToList();
             fetchTeachers();
         } catch (error) {
-            alert("Öğretmen silinemedi!");
+            console.error(error);
+            showToast("Öğretmen silinemedi!", 'error');
         }
     };
 
@@ -203,7 +200,7 @@ const TeacherTab: React.FC = () => {
                                         <td className="p-4 pl-6">
                                             <div className="font-bold text-slate-900">{teacher.firstName} {teacher.lastName}</div>
                                             <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
-                                                @{teacher.user?.username || 'KULLANICI ADI YOK'}
+                                                @{teacher.username || 'KULLANICI ADI YOK'}
                                             </div>
                                         </td>
                                         <td className="p-4">
@@ -212,7 +209,7 @@ const TeacherTab: React.FC = () => {
                                                 </span>
                                         </td>
                                         <td className="p-4 text-sm font-medium text-slate-600">
-                                            {teacher.user?.phone || <span className="text-slate-400 italic">Belirtilmemiş</span>}
+                                            {teacher.phone || <span className="text-slate-400 italic">Belirtilmemiş</span>}
                                         </td>
                                         <td className="p-4 text-sm font-medium text-slate-600">
                                             {teacher.homeroomClasses && teacher.homeroomClasses.length > 0
@@ -269,15 +266,15 @@ const TeacherTab: React.FC = () => {
                             <div className="space-y-4">
                                 <div>
                                     <p className="text-xs font-bold text-slate-500 uppercase">Sistem Kullanıcı Adı</p>
-                                    <p className="text-sm font-bold text-slate-900 mt-0.5">@{selectedTeacher.user?.username || 'Atanmamış'}</p>
+                                    <p className="text-sm font-bold text-slate-900 mt-0.5">@{selectedTeacher.username || 'Atanmamış'}</p>
                                 </div>
                                 <div>
                                     <p className="text-xs font-bold text-slate-500 uppercase">Cep Telefonu</p>
-                                    <p className="text-sm font-bold text-slate-900 mt-0.5">{selectedTeacher.user?.phone || 'Belirtilmemiş'}</p>
+                                    <p className="text-sm font-bold text-slate-900 mt-0.5">{selectedTeacher.phone || 'Belirtilmemiş'}</p>
                                 </div>
                                 <div>
                                     <p className="text-xs font-bold text-slate-500 uppercase">E-Posta Adresi</p>
-                                    <p className="text-sm font-semibold text-slate-700 mt-0.5">{selectedTeacher.user?.email || 'Belirtilmemiş'}</p>
+                                    <p className="text-sm font-semibold text-slate-700 mt-0.5">{selectedTeacher.email || 'Belirtilmemiş'}</p>
                                 </div>
                             </div>
                         </div>
@@ -335,7 +332,7 @@ const TeacherTab: React.FC = () => {
 
                         {/* 1. Aşama: Kişisel Bilgiler */}
                         <section>
-                            <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2 mb-4 text-emerald-700">1. Kişisel Bilgiler ve Branş</h3>
+                            <h3 className="text-lg font-bold text-emerald-700 border-b border-slate-100 pb-2 mb-4">1. Kişisel Bilgiler ve Branş</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-600 mb-2">Ad *</label>
@@ -364,7 +361,7 @@ const TeacherTab: React.FC = () => {
 
                         {/* 2. Aşama: Sistem ve İletişim Bilgileri */}
                         <section>
-                            <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2 mb-4 text-blue-700">2. Sistem Giriş ve İletişim Bilgileri</h3>
+                            <h3 className="text-lg font-bold text-blue-700 border-b border-slate-100 pb-2 mb-4">2. Sistem Giriş ve İletişim Bilgileri</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-600 mb-2">Sistem Kullanıcı Adı *</label>

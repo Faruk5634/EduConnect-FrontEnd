@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import { api } from '../../services/api';
+import { showToast } from '../../utils/toast';
 
 interface StudentInfo { id: number; firstName: string; lastName: string; schoolNumber: string; grade: string; }
-interface UserInfo { username?: string; }
-interface Parent { id: number; firstName: string; lastName: string; email: string; phoneNumber: string; user?: UserInfo; students?: StudentInfo[]; }
+interface Parent { id: number; firstName: string; lastName: string; email: string; phoneNumber: string; username?: string; students?: StudentInfo[]; }
 
 const ParentTab: React.FC = () => {
     const [viewMode, setViewMode] = useState<'list' | 'detail' | 'form'>('list');
@@ -20,22 +20,16 @@ const ParentTab: React.FC = () => {
         fetchInitialData();
     }, []);
 
-    const getAuthHeaders = () => {
-        const token = localStorage.getItem('token');
-        return { Authorization: `Bearer ${token}` };
-    };
-
     const fetchInitialData = async () => {
         setLoading(true);
         try {
             try {
-                const userRes = await axios.get('http://localhost:8080/api/users/me', { headers: getAuthHeaders() });
+                const userRes = await api.get('/users/me');
                 setSchoolType(userRes.data.schoolType || 'HIGH_SCHOOL');
             } catch (err) {
                 console.warn("Kullanıcı türü çekilemedi.");
             }
-
-            const response = await axios.get('http://localhost:8080/api/parents', { headers: getAuthHeaders() });
+            const response = await api.get('/parents');
             setParents(response.data);
         } catch (error) {
             console.error("Veliler çekilemedi:", error);
@@ -57,7 +51,7 @@ const ParentTab: React.FC = () => {
         setSelectedParent(parent);
         setParentForm({
             firstName: parent.firstName, lastName: parent.lastName, email: parent.email || '', phoneNumber: parent.phoneNumber || '',
-            username: parent.user?.username || '', password: ''
+            username: parent.username || '', password: ''
         });
         setViewMode('form');
     };
@@ -66,32 +60,36 @@ const ParentTab: React.FC = () => {
         e.preventDefault();
 
         const payload = {
-            firstName: parentForm.firstName, lastName: parentForm.lastName, email: parentForm.email, phoneNumber: parentForm.phoneNumber,
-            ...(schoolType === 'PRIMARY_MIDDLE_SCHOOL' && {
-                user: { username: parentForm.username, password: parentForm.password, email: parentForm.email, phone: parentForm.phoneNumber }
-            })
+            firstName: parentForm.firstName,
+            lastName: parentForm.lastName,
+            email: parentForm.email,
+            phoneNumber: parentForm.phoneNumber,
+            username: parentForm.username,
+            password: parentForm.password
         };
 
         try {
             if (selectedParent) {
-                await axios.put(`http://localhost:8080/api/parents/${selectedParent.id}`, payload, { headers: getAuthHeaders() });
-                alert("Veli güncellendi! ✅");
+                await api.put(`/parents/${selectedParent.id}`, payload);
+                showToast("Veli güncellendi! ✅", 'success');
             } else {
-                await axios.post('http://localhost:8080/api/parents', payload, { headers: getAuthHeaders() });
-                alert("Veli sisteme kaydedildi! 👨‍👩‍👧");
+                await api.post('/parents', payload);
+                showToast("Veli sisteme kaydedildi! 👨‍👩‍👧", 'success');
             }
             goToList();
             fetchInitialData();
         } catch (error) {
-            alert("İşlem başarısız!");
+            console.error(error);
+            showToast("İşlem başarısız!", 'error');
         }
     };
 
     const handleDelete = async (id: number) => {
         if (window.confirm("Bu veliyi silmek istediğinize emin misiniz?")) {
-            await axios.delete(`http://localhost:8080/api/parents/${id}`, { headers: getAuthHeaders() });
+            await api.delete(`/parents/${id}`);
             fetchInitialData();
             goToList();
+            showToast('Veli silindi ✅', 'success');
         }
     };
 
@@ -133,8 +131,8 @@ const ParentTab: React.FC = () => {
                 <div className="bg-white rounded-xl shadow-sm border p-8">
                     <h3 className="text-3xl font-black mb-2">{selectedParent.firstName} {selectedParent.lastName}</h3>
                     <p className="mb-6 font-bold text-slate-500">📞 {selectedParent.phoneNumber} | ✉️ {selectedParent.email}</p>
-                    {schoolType === 'PRIMARY_MIDDLE_SCHOOL' && (
-                        <p className="mb-6 font-bold text-blue-600">Sistem Giriş Adı: @{selectedParent.user?.username || 'Yok'}</p>
+                    {selectedParent.username && (
+                        <p className="mb-6 font-bold text-blue-600">Sistem Giriş Adı: @{selectedParent.username}</p>
                     )}
                     <h4 className="font-bold border-b pb-2 mb-4">Sorumlu Olduğu Öğrenciler</h4>
                     <ul className="mb-6 list-disc pl-5">
@@ -164,12 +162,41 @@ const ParentTab: React.FC = () => {
                             <div><label className="block text-sm font-bold mb-1">E-Posta *</label><input required type="email" value={parentForm.email} onChange={e => setParentForm({...parentForm, email: e.target.value})} className="w-full border rounded-lg px-4 py-2" /></div>
                         </div>
 
-                        {schoolType === 'PRIMARY_MIDDLE_SCHOOL' && (
-                            <div className="border-t pt-4 grid grid-cols-2 gap-4">
-                                <div><label className="block text-sm font-bold text-emerald-600 mb-1">Sistem Kullanıcı Adı *</label><input required value={parentForm.username} onChange={e => setParentForm({...parentForm, username: e.target.value})} className="w-full border rounded-lg px-4 py-2" /></div>
-                                <div><label className="block text-sm font-bold text-emerald-600 mb-1">{selectedParent ? 'Şifre (Değişmeyecekse Boş Bırak)' : 'Şifre *'}</label><input required={!selectedParent} type="password" value={parentForm.password} onChange={e => setParentForm({...parentForm, password: e.target.value})} className="w-full border rounded-lg px-4 py-2" /></div>
+                        <div className="border-t pt-4">
+                            <div className="mb-3">
+                                <h3 className="text-sm font-bold text-slate-700">
+                                    Giriş Bilgileri {schoolType === 'PRIMARY_MIDDLE_SCHOOL' ? '(zorunlu)' : '(isteğe bağlı)'}
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-1">
+                                    {schoolType === 'PRIMARY_MIDDLE_SCHOOL'
+                                        ? 'İlkokul ve ortaokul velileri sisteme giriş yapabilmek için kullanıcı adı ve şifre ile kaydedilmelidir.'
+                                        : 'Lise velileri için kullanıcı adı ve şifre girilebilir; girilirse veli kendi hesabıyla sisteme giriş yapabilir.'}
+                                </p>
                             </div>
-                        )}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-emerald-600 mb-1">Sistem Kullanıcı Adı {schoolType === 'PRIMARY_MIDDLE_SCHOOL' ? '*' : '(isteğe bağlı)'}</label>
+                                    <input
+                                        required={schoolType === 'PRIMARY_MIDDLE_SCHOOL'}
+                                        value={parentForm.username}
+                                        onChange={e => setParentForm({...parentForm, username: e.target.value})}
+                                        className="w-full border rounded-lg px-4 py-2"
+                                        placeholder="Örn: veli.ayse"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-emerald-600 mb-1">{selectedParent ? 'Şifre (Değişmeyecekse Boş Bırak)' : schoolType === 'PRIMARY_MIDDLE_SCHOOL' ? 'Şifre *' : 'Şifre (isteğe bağlı)'}</label>
+                                    <input
+                                        required={schoolType === 'PRIMARY_MIDDLE_SCHOOL' && !selectedParent}
+                                        type="password"
+                                        value={parentForm.password}
+                                        onChange={e => setParentForm({...parentForm, password: e.target.value})}
+                                        className="w-full border rounded-lg px-4 py-2"
+                                        placeholder="••••••••"
+                                    />
+                                </div>
+                            </div>
+                        </div>
 
                         <button type="submit" className="bg-blue-600 text-white font-bold py-3 px-8 rounded-xl">KAYDET</button>
                     </form>

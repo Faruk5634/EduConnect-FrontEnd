@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api } from '../../services/api';
+import { showToast } from '../../utils/toast';
 
 interface AdminUser {
     id: number;
@@ -45,11 +46,9 @@ const AdminManagementTab: React.FC = () => {
 
     const fetchData = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const headers = { Authorization: `Bearer ${token}` };
             const [adminsRes, schoolsRes] = await Promise.all([
-                axios.get('http://localhost:8080/api/superadmin/admins', { headers }),
-                axios.get('http://localhost:8080/api/schools', { headers })
+                api.get('/superadmin/admins'),
+                api.get('/schools')
             ]);
             setAdmins(adminsRes.data);
             setSchools(schoolsRes.data);
@@ -74,7 +73,7 @@ const AdminManagementTab: React.FC = () => {
         setSelectedAdmin(admin);
         setFormData({
             username: admin.username, password: '', firstName: admin.firstName, lastName: admin.lastName,
-            phone: admin.phone, email: admin.email || '', role: admin.role, schoolId: admin.schoolId || ''
+            phone: admin.phone, email: admin.email || '', role: admin.role, schoolId: admin.schoolId ? admin.schoolId.toString() : ''
         });
         setViewMode('detail');
     };
@@ -84,36 +83,36 @@ const AdminManagementTab: React.FC = () => {
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('token');
             const payload = { ...formData, schoolId: formData.schoolId === '' ? null : Number(formData.schoolId) };
-            await axios.post('http://localhost:8080/api/superadmin/create-admin', payload, { headers: { Authorization: `Bearer ${token}` } });
+            await api.post('/superadmin/create-admin', payload);
             goToList();
             fetchData();
-        } catch (err) { alert("Kayıt başarısız! Kullanıcı adı alınmış olabilir."); }
+            showToast('Yeni yönetici başarıyla oluşturuldu ✅', 'success');
+        } catch (err) { showToast("Kayıt başarısız! Kullanıcı adı alınmış olabilir.", 'error'); }
     };
 
     const handleUpdateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('token');
             const payload = { ...formData, schoolId: formData.schoolId === '' ? null : Number(formData.schoolId) };
-            await axios.put(`http://localhost:8080/api/superadmin/update-admin/${selectedAdmin?.id}`, payload, { headers: { Authorization: `Bearer ${token}` } });
+            await api.put(`/superadmin/update-admin/${selectedAdmin?.id}`, payload);
 
             const updatedAdmin = { ...selectedAdmin, ...formData, schoolName: schools.find(s => s.id === Number(formData.schoolId))?.name || 'Boşta' } as AdminUser;
             setSelectedAdmin(updatedAdmin);
             setViewMode('detail');
             fetchData();
-        } catch (err) { alert("Güncelleme başarısız oldu!"); }
+            showToast('Yönetici bilgileri başarıyla güncellendi ✅', 'success');
+        } catch (err) { showToast("Güncelleme başarısız oldu!", 'error'); }
     };
 
     const handleDelete = async (id: number) => {
         if (window.confirm("Bu yöneticiyi sistemden tamamen silmek istediğinize emin misiniz?")) {
             try {
-                const token = localStorage.getItem('token');
-                await axios.delete(`http://localhost:8080/api/superadmin/delete-admin/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+                await api.delete(`/superadmin/delete-admin/${id}`);
                 goToList();
                 fetchData();
-            } catch (err) { alert("Silme işlemi başarısız!"); }
+                showToast('Yönetici başarıyla silindi ✅', 'success');
+            } catch (err) { showToast("Silme işlemi başarısız!", 'error'); }
         }
     };
 
@@ -242,7 +241,7 @@ const AdminManagementTab: React.FC = () => {
 
             {/* Üst Bar */}
             <div className="flex items-center gap-4 mb-8 pb-4 border-b border-slate-200">
-                <button onClick={goToList} className="text-slate-500 hover:text-slate-900 bg-white border border-slate-300 p-2 rounded-md transition-all shadow-sm font-bold px-4 text-sm tracking-wider">
+                <button onClick={goToList} className="text-slate-500 hover:text-slate-900 bg-white border border-slate-300 p-2 rounded-md transition-all shadow-sm font-bold px-4 text-sm tracking-widest">
                     GERİ DÖN
                 </button>
                 <div>

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { api } from '../../services/api';
 import StudentManagementTab from '../../components/school-admin/StudentManagementTab';
 import ClassroomTab from '../../components/school-admin/ClassroomTab';
 import TeacherTab from '../../components/school-admin/TeacherTab';
@@ -36,16 +36,39 @@ const AdminPanel: React.FC = () => {
         announcements: 0
     });
 
+    // 🧠 Geri Tuşu İçin Akıllı Hafıza Çipi (Aktif sekmeyi her an hatırlar)
+    const activeTabRef = useRef(activeTab);
+    useEffect(() => {
+        activeTabRef.current = activeTab;
+    }, [activeTab]);
+
+    // 🛡️ GERİ TUŞU KORUMASI VE AKILLI YÖNLENDİRME (Anti-Sızıntı Motoru)
+    useEffect(() => {
+        window.history.pushState(null, "", window.location.pathname);
+        const handlePopState = () => {
+            window.history.pushState(null, "", window.location.pathname);
+
+            // Eğer ana sayfada değilsek, önce ana sayfaya dön
+            if (activeTabRef.current !== 'overview') {
+                setActiveTab('overview');
+            } else {
+                // Zaten ana sayfadaysak çıkış uyarısı ver
+                setShowLogoutModal(true);
+            }
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
+
     // 📡 Verileri Backend'den Çekme Motoru
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                const token = localStorage.getItem('token');
-                const headers = { Authorization: `Bearer ${token}` };
+                // Authorization header is provided by api interceptor
 
                 // 1. Kullanıcı ve Kurum Bilgilerini Çek
                 try {
-                    const userRes = await axios.get('http://localhost:8080/api/users/me', { headers });
+                    const userRes = await api.get('/users/me');
                     const user = userRes.data;
 
                     // Rol ismini akıllıca belirle
@@ -66,7 +89,7 @@ const AdminPanel: React.FC = () => {
 
                 // 2. Kuruma Ait İstatistikleri Çek
                 try {
-                    const statsRes = await axios.get('http://localhost:8080/api/school/stats', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                    const statsRes = await api.get('/school/stats');
                     setStats({
                         students: statsRes.data.totalStudents || 0,
                         teachers: statsRes.data.totalTeachers || 0,
@@ -180,10 +203,11 @@ const AdminPanel: React.FC = () => {
                         <p className="text-slate-500 font-medium text-sm mt-1">Sayın {profileData.name} - <span className="font-bold text-blue-600">{profileData.roleTitle}</span></p>
                     </div>
 
-                    {/* Sağ Üst Açılır Menü (Dropdown) */}
+                    {/* Sağ Üst Açılır Menü (Dropdown) Z-INDEX DÜZELTİLDİ */}
                     <div className="relative z-30">
-                        {isDropdownOpen && <div className="fixed inset-0 z-20" onClick={() => setIsDropdownOpen(false)}></div>}
-                        <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className={`flex items-center gap-3 bg-white border px-2 py-2 pr-5 rounded-full hover:bg-slate-50 transition-all shadow-sm group ${isDropdownOpen ? 'border-blue-400 ring-2 ring-blue-100' : 'border-slate-200'}`}>
+                        {isDropdownOpen && <div className="fixed inset-0 z-40 cursor-default" onClick={() => setIsDropdownOpen(false)}></div>}
+
+                        <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className={`relative z-50 flex items-center gap-3 bg-white border px-2 py-2 pr-5 rounded-full hover:bg-slate-50 transition-all shadow-sm group ${isDropdownOpen ? 'border-blue-400 ring-2 ring-blue-100' : 'border-slate-200'}`}>
                             <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-black shadow-inner tracking-tighter">
                                 {getInitials(profileData.name)}
                             </div>
@@ -194,7 +218,7 @@ const AdminPanel: React.FC = () => {
                         </button>
 
                         {isDropdownOpen && (
-                            <div className="absolute right-0 mt-3 w-64 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-fade-in-down origin-top-right">
+                            <div className="absolute right-0 mt-3 w-64 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-fade-in-down origin-top-right z-50">
                                 <div className="p-4 border-b border-slate-100 bg-slate-50">
                                     <p className="text-sm font-bold text-slate-800">{profileData.name}</p>
                                     <p className="text-xs text-slate-500 font-medium truncate">{profileData.email}</p>
@@ -202,6 +226,11 @@ const AdminPanel: React.FC = () => {
                                 <div className="py-2">
                                     <button onClick={() => { setIsDropdownOpen(false); setActiveTab('profile'); }} className="w-full text-left px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-colors flex items-center gap-3">
                                         <span className="text-lg">👤</span> Profili Görüntüle
+                                    </button>
+                                </div>
+                                <div className="py-2 border-t border-slate-100">
+                                    <button onClick={() => { setIsDropdownOpen(false); setActiveTab('messages'); }} className="w-full text-left px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-colors flex items-center gap-3">
+                                        <span className="text-lg">✉️</span> İletişim & Destek
                                     </button>
                                 </div>
                                 <div className="py-2 border-t border-slate-100">
@@ -235,32 +264,32 @@ const AdminPanel: React.FC = () => {
                                     <>
                                         {/* İstatistik Kartları */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                                            <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col items-center justify-center text-center">
-                                                <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center text-2xl mb-4">🎓</div>
+                                            <div onClick={() => setActiveTab('students')} className="cursor-pointer bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-400 transition-all flex flex-col items-center justify-center text-center group">
+                                                <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">🎓</div>
                                                 <h4 className="text-4xl font-black text-slate-800 mb-1">{stats.students}</h4>
                                                 <p className="text-sm font-bold text-slate-500 uppercase tracking-wide">Kayıtlı Öğrenci</p>
                                             </div>
-                                            <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col items-center justify-center text-center">
-                                                <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center text-2xl mb-4">👩‍🏫</div>
+                                            <div onClick={() => setActiveTab('teachers')} className="cursor-pointer bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md hover:border-emerald-400 transition-all flex flex-col items-center justify-center text-center group">
+                                                <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">👩‍🏫</div>
                                                 <h4 className="text-4xl font-black text-slate-800 mb-1">{stats.teachers}</h4>
                                                 <p className="text-sm font-bold text-slate-500 uppercase tracking-wide">Aktif Öğretmen</p>
                                             </div>
-                                            <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col items-center justify-center text-center">
-                                                <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center text-2xl mb-4">🏫</div>
+                                            <div onClick={() => setActiveTab('classes')} className="cursor-pointer bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md hover:border-amber-400 transition-all flex flex-col items-center justify-center text-center group">
+                                                <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">🏫</div>
                                                 <h4 className="text-4xl font-black text-slate-800 mb-1">{stats.classes}</h4>
                                                 <p className="text-sm font-bold text-slate-500 uppercase tracking-wide">Mevcut Sınıf</p>
                                             </div>
-                                            <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col items-center justify-center text-center">
-                                                <div className="w-14 h-14 bg-purple-50 rounded-full flex items-center justify-center text-2xl mb-4">👨‍👩‍👧</div>
+                                            <div onClick={() => setActiveTab('parents')} className="cursor-pointer bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md hover:border-purple-400 transition-all flex flex-col items-center justify-center text-center group">
+                                                <div className="w-14 h-14 bg-purple-50 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">👨‍👩‍👧</div>
                                                 <h4 className="text-4xl font-black text-slate-800 mb-1">{stats.parents}</h4>
                                                 <p className="text-sm font-bold text-slate-500 uppercase tracking-wide">Sistemdeki Veli</p>
                                             </div>
                                         </div>
 
                                         {/* Geniş Bilgi Kartı */}
-                                        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center justify-between">
+                                        <div onClick={() => setActiveTab('announcements')} className="cursor-pointer bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-blue-400 transition-all flex items-center justify-between group">
                                             <div className="flex items-start gap-4">
-                                                <div className="text-2xl mt-1">📢</div>
+                                                <div className="text-2xl mt-1 group-hover:scale-110 transition-transform">📢</div>
                                                 <div>
                                                     <h4 className="font-bold text-slate-800 mb-1">İletişim Durumu</h4>
                                                     <p className="text-sm text-slate-600 font-medium">Sistemde şu ana kadar kurumunuza ait toplam <span className="font-bold text-slate-900">{stats.announcements}</span> adet duyuru yayınlandı.</p>
@@ -280,7 +309,6 @@ const AdminPanel: React.FC = () => {
                         {activeTab === 'announcements' && <div className="h-full"><AnnouncementTab /></div>}
                         {activeTab === 'profile' && <div className="h-full"><ProfileTab /></div>}
                         {activeTab === 'messages' && <div className="h-full"><ContactTab /></div>}
-                        {activeTab === 'profile' && <div className="text-slate-500 font-medium text-center py-20">Profil Sayfası (Buraya ProfileTab gelecek)</div>}
                     </div>
 
                     {/* 🦶 FOOTER (Alt Bilgi) */}
@@ -293,7 +321,7 @@ const AdminPanel: React.FC = () => {
             {/* 🚨 ÇIKIŞ ONAY PENCERESİ */}
             {showLogoutModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 border border-slate-200 relative animate-scale-in">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 border border-slate-200 relative animate-scale-in z-50">
                         <div className="flex flex-col items-center text-center mb-8">
                             <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
                                 <span className="text-3xl">🚪</span>
