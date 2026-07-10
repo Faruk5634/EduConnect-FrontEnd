@@ -233,66 +233,70 @@ const TeacherTab: React.FC = () => {
     }
 
     // ===========================================================================
-    // 2. DETAY GÖRÜNÜMÜ
+    // 2. DETAY GÖRÜNÜMÜ - YENİLENDİ
     // ===========================================================================
     if (viewMode === 'detail' && selectedTeacher) {
         return (
             <div className="animate-fade-in-right h-full flex flex-col">
                 <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-200">
-                    <button onClick={goToList} className="text-slate-500 hover:text-slate-900 bg-white border border-slate-300 px-4 py-2 rounded-lg transition-all shadow-sm font-bold text-sm">
+                    <button onClick={goToList} className="text-slate-500 hover:text-slate-900 bg-white border border-slate-300 px-4 py-2 rounded-lg transition-all shadow-sm font-bold text-sm tracking-wider">
                         ⬅️ GERİ DÖN
                     </button>
-                    <h2 className="text-2xl font-black text-slate-800 tracking-tight">Öğretmen Profili</h2>
+                    <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Öğretmen Profili</h2>
                 </div>
 
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6 max-w-4xl">
-                    <div className="bg-slate-800 p-8 text-white flex items-center gap-6">
-                        <div className="w-20 h-20 bg-slate-700 text-white rounded-xl flex items-center justify-center text-3xl shadow-inner border border-slate-600 font-black">
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6 max-w-4xl mx-auto w-full">
+
+                    {/* 🚀 PREMIUM HEADER */}
+                    <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-8 md:p-10 text-white flex flex-col md:flex-row items-center md:items-start gap-6 relative overflow-hidden">
+                        <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/20 rounded-full blur-[80px]"></div>
+
+                        <div className="w-24 h-24 bg-white/10 backdrop-blur-md text-white rounded-2xl flex items-center justify-center text-4xl font-black shadow-inner border border-white/20 relative z-10 shrink-0">
                             {selectedTeacher.firstName[0]}{selectedTeacher.lastName[0]}
                         </div>
-                        <div>
-                            <h3 className="text-3xl font-black">{selectedTeacher.firstName} {selectedTeacher.lastName}</h3>
-                            <div className="mt-2">
-                                <span className="bg-emerald-500 text-white px-3 py-1 rounded-md text-xs font-bold tracking-widest uppercase">
+                        <div className="relative z-10 text-center md:text-left flex-1">
+                            <h3 className="text-3xl md:text-4xl font-black tracking-tight mb-2">{selectedTeacher.firstName} {selectedTeacher.lastName}</h3>
+                            <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-3">
+                                <span className="px-3 py-1 rounded-md text-xs font-bold tracking-widest uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                                     {selectedTeacher.branch} ÖĞRETMENİ
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="p-8 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-10">
                         <div>
-                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">İletişim & Sistem Bilgileri</h4>
-                            <div className="space-y-4">
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-5 border-b border-slate-100 pb-2">İletişim & Sistem Bilgileri</h4>
+                            <div className="space-y-5">
                                 <div>
                                     <p className="text-xs font-bold text-slate-500 uppercase">Sistem Kullanıcı Adı</p>
-                                    <p className="text-sm font-bold text-slate-900 mt-0.5">@{selectedTeacher.username || 'Atanmamış'}</p>
+                                    <p className="text-base font-bold text-slate-900 mt-1">@{selectedTeacher.username || 'Atanmamış'}</p>
                                 </div>
                                 <div>
                                     <p className="text-xs font-bold text-slate-500 uppercase">Cep Telefonu</p>
-                                    <p className="text-sm font-bold text-slate-900 mt-0.5">{selectedTeacher.phone || 'Belirtilmemiş'}</p>
+                                    <p className="text-base font-bold text-slate-900 mt-1">{selectedTeacher.phone || 'Belirtilmemiş'}</p>
                                 </div>
                                 <div>
                                     <p className="text-xs font-bold text-slate-500 uppercase">E-Posta Adresi</p>
-                                    <p className="text-sm font-semibold text-slate-700 mt-0.5">{selectedTeacher.email || 'Belirtilmemiş'}</p>
+                                    <p className="text-base font-semibold text-slate-700 mt-1">{selectedTeacher.email || 'Belirtilmemiş'}</p>
                                 </div>
                             </div>
                         </div>
                         <div>
-                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Kurum İçi Görevler</h4>
-                            <div className="space-y-4">
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-5 border-b border-slate-100 pb-2">Kurum İçi Görevler</h4>
+                            <div className="space-y-5">
                                 <div>
-                                    <p className="text-xs font-bold text-slate-500 uppercase mb-2">Rehberliği Üstlenilen Sınıflar</p>
+                                    <p className="text-xs font-bold text-slate-500 uppercase mb-3">Rehberliği Üstlenilen Sınıflar</p>
                                     {selectedTeacher.homeroomClasses && selectedTeacher.homeroomClasses.length > 0 ? (
                                         <div className="flex gap-2 flex-wrap">
                                             {selectedTeacher.homeroomClasses.map(c => (
-                                                <span key={c.id} className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 rounded-lg font-bold text-sm">
+                                                <span key={c.id} className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-lg font-bold text-sm">
                                                     {c.name} Sınıfı
                                                 </span>
                                             ))}
                                         </div>
                                     ) : (
-                                        <p className="text-sm font-medium text-slate-400 italic">Sorumlu olduğu bir sınıf bulunmuyor.</p>
+                                        <p className="text-sm font-medium text-slate-400 italic bg-slate-50 p-3 rounded-lg border border-slate-100">Sorumlu olduğu bir sınıf bulunmuyor.</p>
                                     )}
                                 </div>
                             </div>

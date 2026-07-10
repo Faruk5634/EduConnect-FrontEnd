@@ -263,35 +263,35 @@ const StudentManagementTab: React.FC = () => {
     }
 
     // ===========================================================================
-    // 2. DETAY GÖRÜNÜMÜ (PROFİL KARTI)
+    // 2. DETAY GÖRÜNÜMÜ (PROFİL KARTI) - YENİLENDİ
     // ===========================================================================
     if (viewMode === 'detail' && selectedStudent) {
         return (
             <div className="animate-fade-in-right h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl flex flex-col">
                 <div className="flex items-center gap-4 mb-8 pb-4 border-b border-slate-200">
                     <button onClick={goToList} className="text-slate-500 hover:text-slate-900 bg-white border border-slate-300 p-2 rounded-md transition-all shadow-sm font-bold px-4 text-sm tracking-wider">
-                        GERİ DÖN
+                        ⬅️ GERİ DÖN
                     </button>
                     <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Öğrenci Profili</h2>
                 </div>
 
                 <div className="max-w-4xl mx-auto w-full">
-                    <div className="bg-white rounded-md shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
 
-                        {/* Profil Üst Kısım - Lacivert Arka Plan */}
-                        <div className="bg-[#1e293b] p-8 text-white flex items-center gap-6 relative overflow-hidden">
-                            <div className="absolute right-0 top-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+                        {/* 🚀 PREMIUM HEADER */}
+                        <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-8 md:p-10 text-white flex flex-col md:flex-row items-center md:items-start gap-6 relative overflow-hidden">
+                            <div className="absolute right-0 top-0 w-64 h-64 bg-blue-500/20 rounded-full blur-[80px]"></div>
 
-                            <div className="w-20 h-20 bg-slate-700/50 text-white rounded-md flex items-center justify-center text-3xl font-black shadow-inner border border-slate-600 relative z-10">
+                            <div className="w-24 h-24 bg-white/10 backdrop-blur-md text-white rounded-2xl flex items-center justify-center text-4xl font-black shadow-inner border border-white/20 relative z-10 shrink-0">
                                 {selectedStudent.firstName.charAt(0)}{selectedStudent.lastName.charAt(0)}
                             </div>
-                            <div className="relative z-10">
-                                <h3 className="text-3xl font-black">{selectedStudent.firstName} {selectedStudent.lastName}</h3>
-                                <div className="mt-3 flex gap-2">
-                                    <span className="px-3 py-1 rounded-md text-xs font-bold tracking-widest uppercase bg-[#10b981] text-white">
+                            <div className="relative z-10 text-center md:text-left flex-1">
+                                <h3 className="text-3xl md:text-4xl font-black tracking-tight mb-2">{selectedStudent.firstName} {selectedStudent.lastName}</h3>
+                                <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-3">
+                                    <span className="px-3 py-1 rounded-md text-xs font-bold tracking-widest uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                                         SINIF: {selectedStudent.grade || 'ATANMADI'}
                                     </span>
-                                    <span className="px-3 py-1 rounded-md text-xs font-bold tracking-widest uppercase bg-slate-700 text-slate-300 border border-slate-600">
+                                    <span className="px-3 py-1 rounded-md text-xs font-bold tracking-widest uppercase bg-blue-500/20 text-blue-300 border border-blue-500/30">
                                         NO: {selectedStudent.schoolNumber}
                                     </span>
                                 </div>
@@ -299,30 +299,30 @@ const StudentManagementTab: React.FC = () => {
                         </div>
 
                         {/* Detaylar Kısımı */}
-                        <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="p-8 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-10">
                             <div>
-                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Kişisel Bilgiler</h4>
-                                <div className="space-y-4">
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-5 border-b border-slate-100 pb-2">Kişisel Bilgiler</h4>
+                                <div className="space-y-5">
                                     {schoolType === 'HIGH_SCHOOL' && (
                                         <div>
                                             <p className="text-xs font-bold text-slate-500 uppercase">Sistem Kullanıcı Adı</p>
-                                            <p className="text-sm font-bold text-slate-900 mt-0.5">
+                                            <p className="text-base font-bold text-slate-900 mt-1">
                                                 {selectedStudent.username ? `@${selectedStudent.username}` : <span className="text-slate-400 italic">Belirtilmemiş</span>}
                                             </p>
                                         </div>
                                     )}
                                     <div>
                                         <p className="text-xs font-bold text-slate-500 uppercase mb-1.5">Cinsiyet</p>
-                                        {getGenderBadge(selectedStudent.gender)}
+                                        <div className="mt-1">{getGenderBadge(selectedStudent.gender)}</div>
                                     </div>
                                 </div>
                             </div>
                             <div>
-                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Aile & İletişim Bilgileri</h4>
-                                <div className="space-y-4">
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-5 border-b border-slate-100 pb-2">Aile & İletişim Bilgileri</h4>
+                                <div className="space-y-5">
                                     <div>
                                         <p className="text-xs font-bold text-slate-500 uppercase">Sorumlu Veli</p>
-                                        <p className={`text-sm font-bold mt-0.5 ${selectedStudent.parentFullName ? 'text-slate-900' : 'text-amber-600'}`}>
+                                        <p className={`text-base font-bold mt-1 ${selectedStudent.parentFullName ? 'text-slate-900' : 'text-amber-600'}`}>
                                             {selectedStudent.parentFullName || 'Sisteme Veli Atanmamış'}
                                         </p>
                                     </div>
@@ -332,10 +332,10 @@ const StudentManagementTab: React.FC = () => {
 
                         {/* Aksiyon Butonları */}
                         <div className="p-6 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
-                            <button onClick={() => handleDelete(selectedStudent.id, selectedStudent.firstName)} className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-6 py-2.5 rounded-md font-bold text-sm tracking-widest transition-all shadow-sm">
+                            <button onClick={() => handleDelete(selectedStudent.id, selectedStudent.firstName)} className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-6 py-2.5 rounded-lg font-bold text-sm tracking-widest transition-all shadow-sm">
                                 SİSTEMDEN SİL
                             </button>
-                            <button onClick={() => openEditForm(selectedStudent)} className="bg-[#0f172a] hover:bg-blue-700 text-white px-8 py-2.5 rounded-md font-bold text-sm tracking-widest shadow-md transition-all">
+                            <button onClick={() => openEditForm(selectedStudent)} className="bg-slate-900 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg font-bold text-sm tracking-widest shadow-md transition-all">
                                 BİLGİLERİ DÜZENLE
                             </button>
                         </div>

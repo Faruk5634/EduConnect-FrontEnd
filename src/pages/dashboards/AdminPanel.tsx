@@ -140,8 +140,12 @@ const AdminPanel: React.FC = () => {
 
             {/* 🧭 Sol Navigasyon (Sidebar) */}
             <aside className="w-72 bg-white border-r border-slate-200 flex flex-col shadow-sm z-10">
-                <div className="p-8 border-b border-slate-100">
-                    <h1 className="text-3xl font-black text-blue-700 tracking-tight">
+                {/* 🚀 DEĞİŞİKLİK BURADA: cursor-pointer eklendi ve onClick verildi */}
+                <div
+                    className="p-8 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors group"
+                    onClick={() => setActiveTab('overview')}
+                >
+                    <h1 className="text-3xl font-black text-blue-700 tracking-tight group-hover:scale-105 transition-transform origin-left">
                         EduConnect
                     </h1>
                     <p className="text-xs text-slate-500 mt-2 uppercase tracking-widest font-bold">
