@@ -6,8 +6,8 @@ const LoginPage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // CampusPortal'dan gelen gizli bilgileri yakalıyoruz (Eğer direkt linkle gelinirse Öğrenci varsayıyoruz)
-    const { roleTitle = 'Öğrenci', roleIcon = '🎓' } = location.state || {};
+    // 🚀 DÜZELTME: roleId bilgisini de Kampüs Meydanından yakalıyoruz
+    const { roleId = 'student', roleTitle = 'Öğrenci', roleIcon = '🎓' } = location.state || {};
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -25,28 +25,40 @@ const LoginPage: React.FC = () => {
             });
 
             const token = response.data.token;
-            const role = response.data.role; // Backend'den gelen asıl rütbe (Örn: ROLE_STUDENT)
+            const role = response.data.role; // Backend'den gelen asıl ve kesin rütbe
 
-            // Biletleri ambara kaldırıyoruz
+            // 🚨 GÜVENLİK KİLİDİ 1: Yöneticiler Kampüs kapısından giremez!
+            if (role === 'ROLE_SUPER_ADMIN' || role === 'ROLE_ADMIN' || role === 'ROLE_VICE_ADMIN') {
+                setError("Bu portal sadece kampüs kullanıcıları içindir. Lütfen Yönetici Portalı'nı kullanın.");
+                return; // Girişi iptal et, token'ı kaydetme!
+            }
+
+            // 🚨 GÜVENLİK KİLİDİ 2: Çapraz Kapı Sızıntısını Engelle! (Seçilen Rol == Gerçek Rol olmalı)
+            let expectedRole = '';
+            if (roleId === 'student') expectedRole = 'ROLE_STUDENT';
+            else if (roleId === 'teacher') expectedRole = 'ROLE_TEACHER';
+            else if (roleId === 'parent') expectedRole = 'ROLE_PARENT';
+
+            if (role !== expectedRole) {
+                setError(`Hatalı Giriş! Bu ekrandan sadece ${roleTitle} yetkisine sahip kişiler giriş yapabilir.`);
+                return; // Girişi iptal et, token'ı kaydetme!
+            }
+
+            // 🟢 Tüm kilitler başarıyla aşıldıysa biletleri ambara kaldır
             localStorage.setItem('token', token);
             localStorage.setItem('userRole', role);
 
             console.log(`Kaptan, ${role} olarak giriş başarılı!`);
 
             // 🚦 Rütbeye Göre İlgili Panele Işınlama
-            if (role === 'ROLE_SUPER_ADMIN') {
-                navigate('/superadmin');
-            } else if (role === 'ROLE_ADMIN' || role === 'ROLE_VICE_ADMIN') {
-                // 🚀 DÜZELTME: Müdür ve Müdür Yardımcısı aynı panele yönlendiriliyor
-                navigate('/admin');
-            } else if (role === 'ROLE_TEACHER') {
+            if (role === 'ROLE_TEACHER') {
                 navigate('/teacher');
             } else if (role === 'ROLE_PARENT') {
                 navigate('/parent');
             } else if (role === 'ROLE_STUDENT') {
                 navigate('/student');
             } else {
-                // Beklenmeyen bir rütbe gelirse Liman'a geri at
+                // Beklenmeyen bir durum olursa Liman'a geri at
                 navigate('/');
             }
 
@@ -77,7 +89,7 @@ const LoginPage: React.FC = () => {
 
                 <form onSubmit={handleLogin} className="space-y-5">
                     {error && (
-                        <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl text-sm text-center">
+                        <div className="bg-red-500/20 border border-red-500/50 text-red-100 px-4 py-3 rounded-xl text-sm text-center font-medium animate-pulse">
                             {error}
                         </div>
                     )}
