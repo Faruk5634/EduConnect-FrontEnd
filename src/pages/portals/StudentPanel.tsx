@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import { showToast } from '../../utils/toast';
 
-// 🚀 Backend DTO'ları ile tam uyumlu arayüzler
+// --- Arayüzler (Interfaces) ---
 interface StudentProfile {
     id: number;
     firstName: string;
@@ -29,40 +29,165 @@ interface Announcement {
     fileUrl?: string;
 }
 
+interface Message {
+    id: number;
+    subject: string;
+    content: string;
+    date: string;
+    time: string;
+    isRead: boolean;
+    type: 'INBOX' | 'SENT';
+    sender: string;
+}
+
+type ProfileViewMode = 'overview' | 'editPersonal' | 'editEmail' | 'editPhone' | 'editPassword';
+
 export default function StudentPanel() {
     const navigate = useNavigate();
+    const userRole = localStorage.getItem('userRole');
 
+    // 🚦 Durum Yönetimi
     const [activeTab, setActiveTab] = useState('announcements');
     const [profile, setProfile] = useState<StudentProfile | null>(null);
-    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [loading, setLoading] = useState(true);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+    // 📢 Duyuru State'leri
+    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+    const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+
+    // ✉️ E-Posta State'leri
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [mailBoxView, setMailBoxView] = useState<'INBOX' | 'SENT'>('INBOX');
+    const [rightPaneMode, setRightPaneMode] = useState<'EMPTY' | 'READ' | 'COMPOSE'>('EMPTY');
+    const [msgReceiverId, setMsgReceiverId] = useState('');
+    const [msgSubject, setMsgSubject] = useState('');
+    const [msgContent, setMsgContent] = useState('');
+    const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+
+    // 👤 Profil Düzenleme State'leri
+    const [profileViewMode, setProfileViewMode] = useState<ProfileViewMode>('overview');
+    const [updateForm, setUpdateForm] = useState({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        currentPassword: '',
+        newPassword: ''
+    });
+
     useEffect(() => {
-        fetchData();
+        fetchInitialData();
     }, []);
 
-    const fetchData = async () => {
+    const fetchInitialData = async () => {
         try {
-            // 1. Öğrencinin Kendi Profilini Çek (Yeni eklediğimiz /me endpoint'i)
             const profileRes = await api.get('/students/me');
             setProfile(profileRes.data);
 
-            // 2. Okuldaki Duyuruları Çek
-            const annRes = await api.get('/announcements');
+            setUpdateForm(prev => ({
+                ...prev,
+                firstName: profileRes.data.firstName,
+                lastName: profileRes.data.lastName,
+                email: profileRes.data.email || '',
+                phone: profileRes.data.phone || ''
+            }));
 
-            // Sadece 'Genel' duyuruları ve öğrencinin 'Kendi Sınıfına' ait duyuruları filtrele
+            const annRes = await api.get('/announcements');
             const filteredAnnouncements = annRes.data.filter((ann: Announcement) =>
                 ann.classroomName === "Genel Duyuru" || ann.classroomName === profileRes.data.grade
             );
-
             setAnnouncements(filteredAnnouncements);
+
+            await fetchMessages();
         } catch (err) {
             console.error("Veriler çekilemedi:", err);
             showToast("Bilgiler yüklenirken bir hata oluştu.", "error");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchMessages = async () => {
+        try {
+            const msgRes = await api.get('/messages');
+            setMessages(msgRes.data);
+        } catch (error) {
+            console.error("Mesajlar çekilemedi", error);
+        }
+    };
+
+    const handleSendMessage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!msgReceiverId) {
+            showToast('Lütfen bir alıcı ID numarası girin.', 'error');
+            return;
+        }
+        try {
+            const finalSubject = userRole === 'ROLE_PARENT'
+                ? `[Veli Tarafından Gönderildi] ${msgSubject}`
+                : msgSubject;
+
+            await api.post('/messages', {
+                receiverId: msgReceiverId,
+                subject: finalSubject,
+                content: msgContent
+            });
+
+            showToast('Mesaj başarıyla gönderildi!', 'success');
+            setMsgReceiverId('');
+            setMsgSubject('');
+            setMsgContent('');
+            setRightPaneMode('EMPTY');
+
+            await fetchMessages();
+            setMailBoxView('SENT');
+
+        } catch (error) {
+            showToast('Mesaj gönderilemedi.', 'error');
+        }
+    };
+
+    const handleReadMessage = async (msg: Message) => {
+        setSelectedMessage(msg);
+        setRightPaneMode('READ');
+        if (msg.type === 'INBOX' && !msg.isRead) {
+            try {
+                await api.put(`/messages/${msg.id}/read`);
+                setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isRead: true } : m));
+            } catch (error) {
+                console.error("Okundu işaretlenemedi", error);
+            }
+        }
+    };
+
+    const handleProfileUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            if (profileViewMode === 'editPassword') {
+                if (!updateForm.currentPassword || !updateForm.newPassword) {
+                    showToast('Lütfen mevcut ve yeni şifrenizi girin.', 'error');
+                    return;
+                }
+                await api.put('/users/me', { password: updateForm.newPassword, currentPassword: updateForm.currentPassword });
+            } else {
+                const payload: any = {
+                    firstName: updateForm.firstName,
+                    lastName: updateForm.lastName,
+                    email: updateForm.email,
+                    phone: updateForm.phone
+                };
+                await api.put('/users/me', payload);
+            }
+
+            showToast('Profil bilgileriniz başarıyla güncellendi.', 'success');
+            setProfileViewMode('overview');
+            setUpdateForm(prev => ({ ...prev, newPassword: '', currentPassword: '' }));
+            await fetchInitialData();
+        } catch (err: any) {
+            const serverMsg = err?.response?.data || 'Profil güncellenemedi.';
+            showToast(serverMsg, 'error');
         }
     };
 
@@ -73,12 +198,11 @@ export default function StudentPanel() {
         navigate('/');
     };
 
-    const getInitials = (firstName?: string, lastName?: string) => {
-        if (!firstName || !lastName) return 'ÖG';
-        return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    const getInitials = (first?: string, last?: string) => {
+        if (!first || !last) return 'ÖG';
+        return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
     };
 
-    // Duyuru tipine göre rozet rengi
     const getTypeBadge = (type: string) => {
         switch (type) {
             case 'HOMEWORK': return <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-[10px] font-black tracking-widest uppercase">📝 ÖDEV</span>;
@@ -88,14 +212,27 @@ export default function StudentPanel() {
         }
     };
 
+    // 🚀 YENİ: Duyuru tipine göre tam sayfa kapak rengi belirleyici
+    const getHeaderBgForType = (type: string) => {
+        switch (type) {
+            case 'HOMEWORK': return 'bg-gradient-to-r from-orange-500 to-amber-600';
+            case 'EXAM_INFO': return 'bg-gradient-to-r from-red-500 to-rose-600';
+            case 'EVENT': return 'bg-gradient-to-r from-purple-500 to-fuchsia-600';
+            default: return 'bg-gradient-to-r from-blue-600 to-indigo-700';
+        }
+    };
+
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-indigo-600 font-bold animate-pulse text-xl">Öğrenci Paneli Hazırlanıyor...</div>;
+
+    const displayedMessages = messages.filter(m => m.type === mailBoxView);
+    const unreadCount = messages.filter(m => m.type === 'INBOX' && !m.isRead).length;
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-800 flex font-sans selection:bg-indigo-500/30">
 
             {/* 🧭 SOL NAVİGASYON (Sidebar) */}
-            <aside className="w-72 bg-white border-r border-slate-200 flex flex-col shadow-sm z-10">
-                <div className="p-8 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors group">
+            <aside className="w-72 bg-white border-r border-slate-200 flex flex-col shadow-sm z-10 shrink-0">
+                <div onClick={() => navigate('/campus')} className="p-8 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors group">
                     <h1 className="text-3xl font-black text-indigo-600 tracking-tight group-hover:scale-105 transition-transform origin-left">
                         EduConnect
                     </h1>
@@ -105,18 +242,20 @@ export default function StudentPanel() {
                 </div>
 
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-                    <button onClick={() => setActiveTab('announcements')} className={`w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all group font-semibold ${activeTab === 'announcements' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-indigo-700'}`}>
+                    <button onClick={() => {setActiveTab('announcements'); setProfileViewMode('overview'); setSelectedAnnouncement(null);}} className={`w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all group font-semibold ${activeTab === 'announcements' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-indigo-700'}`}>
                         <span className="text-xl group-hover:scale-110 transition-transform">📢</span>
                         <span className="tracking-wide">Duyuru & Ödevler</span>
                     </button>
-                    {/* Gelecek Modüller İçin Yer Tutucular */}
-                    <button className="w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all group font-semibold text-slate-400 cursor-not-allowed opacity-70">
-                        <span className="text-xl">📊</span>
-                        <span className="tracking-wide">Notlar & Karneler</span>
+                    <button onClick={() => {setActiveTab('messages'); setRightPaneMode('EMPTY'); setProfileViewMode('overview'); setSelectedAnnouncement(null);}} className={`w-full flex items-center justify-between px-5 py-3.5 rounded-xl transition-all group font-semibold ${activeTab === 'messages' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-indigo-700'}`}>
+                        <div className="flex items-center space-x-4">
+                            <span className="text-xl group-hover:scale-110 transition-transform">✉️</span>
+                            <span className="tracking-wide">İletişim</span>
+                        </div>
+                        {unreadCount > 0 && <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-black">{unreadCount}</span>}
                     </button>
-                    <button className="w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all group font-semibold text-slate-400 cursor-not-allowed opacity-70">
-                        <span className="text-xl">📅</span>
-                        <span className="tracking-wide">Ders Programı</span>
+                    <button onClick={() => {setActiveTab('profile'); setProfileViewMode('overview'); setSelectedAnnouncement(null);}} className={`w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all group font-semibold ${activeTab === 'profile' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-indigo-700'}`}>
+                        <span className="text-xl group-hover:scale-110 transition-transform">👤</span>
+                        <span className="tracking-wide">Profilim</span>
                     </button>
                 </nav>
 
@@ -158,6 +297,14 @@ export default function StudentPanel() {
                                     <p className="text-xs text-slate-500 font-medium truncate">{profile?.email || 'E-Posta Belirtilmemiş'}</p>
                                 </div>
                                 <div className="py-2">
+                                    <button onClick={() => { setIsDropdownOpen(false); setActiveTab('profile'); setProfileViewMode('overview'); }} className="w-full text-left px-5 py-2.5 text-sm font-medium text-slate-700 hover:text-indigo-700 hover:bg-indigo-50 transition-colors flex items-center gap-3">
+                                        <span className="text-lg">👤</span> Profilimi Görüntüle
+                                    </button>
+                                    <button onClick={() => { setIsDropdownOpen(false); setActiveTab('messages'); setRightPaneMode('EMPTY'); }} className="w-full text-left px-5 py-2.5 text-sm font-medium text-slate-700 hover:text-indigo-700 hover:bg-indigo-50 transition-colors flex items-center gap-3">
+                                        <span className="text-lg">✉️</span> İletişim & Mesajlar
+                                    </button>
+                                </div>
+                                <div className="py-2 border-t border-slate-100">
                                     <button onClick={() => { setIsDropdownOpen(false); setShowLogoutModal(true); }} className="w-full text-left px-5 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3">
                                         <span className="text-lg">🚪</span> Sistemden Çıkış
                                     </button>
@@ -168,108 +315,447 @@ export default function StudentPanel() {
                 </header>
 
                 {/* 🧩 İÇERİK ALANI */}
-                <div className="flex-1 overflow-y-auto p-10">
-                    <div className="max-w-6xl mx-auto flex flex-col-reverse lg:flex-row gap-8">
+                <div className="flex-1 overflow-y-auto p-10 bg-slate-50/50">
 
-                        {/* SOL: DUYURULAR AKIŞI (FEED) */}
-                        <div className="flex-[2] space-y-6">
-                            <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
-                                <span>📰</span> Güncel Akış
-                            </h3>
+                    {/* 📢 DUYURULAR SEKME */}
+                    {activeTab === 'announcements' && (
+                        <div className="max-w-7xl mx-auto animate-fade-in-down">
 
-                            {announcements.length === 0 ? (
-                                <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-sm">
-                                    <div className="text-5xl mb-4">📭</div>
-                                    <h4 className="text-lg font-bold text-slate-700">Henüz bir duyuru yok</h4>
-                                    <p className="text-slate-500 text-sm mt-1">Okulunuzdan veya sınıfınızdan yeni bir duyuru geldiğinde burada görünecektir.</p>
-                                </div>
-                            ) : (
-                                announcements.map((ann) => (
-                                    <div key={ann.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                                        {/* Dekoratif Sol Çizgi */}
-                                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${ann.type === 'HOMEWORK' ? 'bg-orange-400' : ann.type === 'EXAM_INFO' ? 'bg-red-400' : ann.type === 'EVENT' ? 'bg-purple-400' : 'bg-blue-400'}`}></div>
+                            {selectedAnnouncement ? (
+                                /* 🚀 TAM SAYFA DUYURU DETAY EKRANI */
+                                <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200 animate-scale-in">
 
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg font-bold text-slate-600">
-                                                    {ann.authorName.charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-bold text-slate-800">{ann.authorName}</p>
-                                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                                        {new Date(ann.createdDate).toLocaleDateString('tr-TR')} • {new Date(ann.createdDate).toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})}
-                                                    </p>
-                                                </div>
+                                    {/* KAPAK ALANI (Banner) */}
+                                    <div className={`relative h-48 ${getHeaderBgForType(selectedAnnouncement.type)} flex items-end p-8`}>
+                                        {/* Arka Plan Efekti */}
+                                        <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+                                        <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-[80px]"></div>
+
+                                        {/* Geri Dön Butonu */}
+                                        <button
+                                            onClick={() => setSelectedAnnouncement(null)}
+                                            className="absolute top-6 left-6 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white px-5 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 shadow-sm border border-white/30"
+                                        >
+                                            <span>←</span> Akışa Geri Dön
+                                        </button>
+
+                                        {/* Rozet */}
+                                        <div className="relative z-10 flex gap-3">
+                                            <span className="bg-white/90 text-slate-800 px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase shadow-sm">
+                                                {selectedAnnouncement.type === 'HOMEWORK' ? '📝 ÖDEV' : selectedAnnouncement.type === 'EXAM_INFO' ? '🎯 SINAV' : selectedAnnouncement.type === 'EVENT' ? '🎉 ETKİNLİK' : '📢 GENEL'}
+                                            </span>
+                                            <span className="bg-white/20 backdrop-blur-md text-white px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase border border-white/30 shadow-sm">
+                                                {selectedAnnouncement.classroomName}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* İÇERİK ALANI */}
+                                    <div className="p-10 md:p-14">
+                                        <h2 className="text-4xl font-black text-slate-800 mb-8 leading-tight tracking-tight">{selectedAnnouncement.title}</h2>
+
+                                        <div className="flex items-center gap-4 mb-10 pb-8 border-b border-slate-100">
+                                            <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-2xl font-bold text-slate-600 shadow-sm">
+                                                {selectedAnnouncement.authorName.charAt(0)}
                                             </div>
-                                            <div className="flex flex-col items-end gap-2">
-                                                {getTypeBadge(ann.type)}
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase">{ann.classroomName}</span>
+                                            <div>
+                                                <p className="text-lg font-bold text-slate-800">{selectedAnnouncement.authorName}</p>
+                                                <p className="text-xs font-bold text-slate-400 tracking-wide mt-1">
+                                                    Yayınlanma: {new Date(selectedAnnouncement.createdDate).toLocaleDateString('tr-TR')} • {new Date(selectedAnnouncement.createdDate).toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})}
+                                                </p>
                                             </div>
                                         </div>
 
-                                        <h4 className="text-xl font-black text-slate-800 mb-2">{ann.title}</h4>
-                                        <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap mb-4">{ann.content}</p>
+                                        <div className="prose max-w-none text-slate-600 font-medium leading-relaxed whitespace-pre-wrap text-lg">
+                                            {selectedAnnouncement.content}
+                                        </div>
 
-                                        {ann.fileUrl && (
-                                            <div className="mt-4 pt-4 border-t border-slate-100">
+                                        {selectedAnnouncement.fileUrl && (
+                                            <div className="mt-12 pt-8 border-t border-slate-100 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+                                                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                    <span>📎</span> Ekli Dosyalar
+                                                </h4>
                                                 <a
-                                                    href={`http://localhost:8080${ann.fileUrl}`}
+                                                    href={`http://localhost:8080${selectedAnnouncement.fileUrl}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg text-sm font-bold transition-colors border border-indigo-100"
+                                                    className="inline-flex items-center gap-3 bg-white hover:bg-indigo-50 text-indigo-700 px-6 py-4 rounded-xl text-sm font-bold transition-all shadow-sm border border-slate-200 hover:border-indigo-200 hover:shadow-md"
                                                 >
-                                                    <span>📎</span> {ann.fileName || 'Ekli Dosyayı İndir'}
+                                                    <span className="text-2xl text-indigo-500">📄</span>
+                                                    <span>{selectedAnnouncement.fileName || 'Dosyayı Görüntüle / İndir'}</span>
+                                                    <span className="ml-4 text-slate-400">⬇</span>
                                                 </a>
                                             </div>
                                         )}
                                     </div>
-                                ))
+                                </div>
+                            ) : (
+                                /* 📰 DUYURU AKIŞI (FEED) ve KİMLİK KARTI */
+                                <div className="flex flex-col-reverse lg:flex-row gap-8">
+                                    <div className="flex-[2] space-y-6">
+                                        <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+                                            <span>📰</span> Güncel Akış
+                                        </h3>
+
+                                        {announcements.length === 0 ? (
+                                            <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-sm">
+                                                <div className="text-5xl mb-4">📭</div>
+                                                <h4 className="text-lg font-bold text-slate-700">Henüz bir duyuru yok</h4>
+                                                <p className="text-slate-500 text-sm mt-1">Okulunuzdan veya sınıfınızdan yeni bir duyuru geldiğinde burada görünecektir.</p>
+                                            </div>
+                                        ) : (
+                                            announcements.map((ann) => (
+                                                <div
+                                                    key={ann.id}
+                                                    onClick={() => setSelectedAnnouncement(ann)}
+                                                    className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer relative overflow-hidden group hover:-translate-y-1"
+                                                >
+                                                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${ann.type === 'HOMEWORK' ? 'bg-orange-400' : ann.type === 'EXAM_INFO' ? 'bg-red-400' : ann.type === 'EVENT' ? 'bg-purple-400' : 'bg-blue-400'}`}></div>
+
+                                                    <div className="flex justify-between items-start mb-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg font-bold text-slate-600 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                                                                {ann.authorName.charAt(0)}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-bold text-slate-800">{ann.authorName}</p>
+                                                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                                                    {new Date(ann.createdDate).toLocaleDateString('tr-TR')} • {new Date(ann.createdDate).toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex flex-col items-end gap-2">
+                                                            {getTypeBadge(ann.type)}
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase">{ann.classroomName}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <h4 className="text-xl font-black text-slate-800 mb-2 group-hover:text-indigo-600 transition-colors">{ann.title}</h4>
+                                                    <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap mb-4 line-clamp-3">{ann.content}</p>
+
+                                                    <div className="mt-4 pt-4 border-t border-slate-50 flex items-center justify-between">
+                                                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">Detayları Oku →</span>
+                                                        {ann.fileUrl && <span className="text-lg bg-slate-50 w-8 h-8 flex items-center justify-center rounded-lg text-slate-500">📎</span>}
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    {/* SAĞ: DİJİTAL ÖĞRENCİ KİMLİĞİ */}
+                                    <div className="flex-1">
+                                        <div className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden sticky top-0">
+                                            <div className="bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 p-8 text-white relative flex flex-col items-center">
+                                                <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+                                                <div className="w-24 h-24 bg-white/10 backdrop-blur-sm text-white rounded-full flex items-center justify-center text-4xl font-black shadow-2xl border-4 border-white/20 relative z-10 mb-4">
+                                                    {getInitials(profile?.firstName, profile?.lastName)}
+                                                </div>
+                                                <h3 className="text-2xl font-black tracking-tight relative z-10 text-center">{profile?.firstName} <br/> {profile?.lastName}</h3>
+                                                <div className="mt-4 bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 relative z-10 flex flex-col items-center">
+                                                    <span className="text-[10px] text-indigo-200 font-bold uppercase tracking-widest mb-1">Okul Numarası</span>
+                                                    <span className="text-xl font-black tracking-widest">{profile?.schoolNumber}</span>
+                                                </div>
+                                            </div>
+                                            <div className="p-6 bg-white">
+                                                <div className="space-y-4">
+                                                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sınıf</span>
+                                                        <span className="text-sm font-black text-slate-800">{profile?.grade || 'Atanmadı'}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sistem Adı</span>
+                                                        <span className="text-sm font-bold text-indigo-600">@{profile?.username}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Kayıtlı Veli</span>
+                                                        <span className="text-sm font-bold text-slate-800">{profile?.parentFullName || 'Belirtilmemiş'}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center pb-1">
+                                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Cinsiyet</span>
+                                                        <span className="text-sm font-bold text-slate-800">{profile?.gender}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             )}
                         </div>
+                    )}
 
-                        {/* SAĞ: DİJİTAL ÖĞRENCİ KİMLİĞİ */}
-                        <div className="flex-1">
-                            <div className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden sticky top-0">
-                                {/* Kimlik Üst Kısım (Gradient) */}
-                                <div className="bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 p-8 text-white relative flex flex-col items-center">
-                                    <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+                    {/* ✉️ İLETİŞİM & MESAJLAR SEKME */}
+                    {activeTab === 'messages' && (
+                        <div className="max-w-7xl mx-auto flex flex-col h-[calc(100vh-150px)] animate-fade-in">
+                            <div className="mb-4 flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-2xl font-black text-slate-800">İletişim</h2>
+                                    <p className="text-sm text-slate-500 font-medium">Öğretmenlerinizle veya okul yönetimiyle iletişime geçin.</p>
+                                </div>
+                                <button onClick={() => setRightPaneMode('COMPOSE')} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-colors shadow-sm flex items-center gap-2">
+                                    <span>✎</span> YENİ MESAJ
+                                </button>
+                            </div>
 
-                                    <div className="w-24 h-24 bg-white/10 backdrop-blur-sm text-white rounded-full flex items-center justify-center text-4xl font-black shadow-2xl border-4 border-white/20 relative z-10 mb-4">
-                                        {getInitials(profile?.firstName, profile?.lastName)}
+                            <div className="flex-1 flex gap-6 overflow-hidden">
+                                {/* SOL PANE: LİSTE */}
+                                <div className="w-1/3 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+                                    <div className="flex border-b border-slate-100 bg-slate-50">
+                                        <button onClick={() => {setMailBoxView('INBOX'); setRightPaneMode('EMPTY');}} className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${mailBoxView === 'INBOX' ? 'border-indigo-600 text-indigo-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>Gelen Kutusu</button>
+                                        <button onClick={() => {setMailBoxView('SENT'); setRightPaneMode('EMPTY');}} className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${mailBoxView === 'SENT' ? 'border-indigo-600 text-indigo-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>Gönderilenler</button>
                                     </div>
-                                    <h3 className="text-2xl font-black tracking-tight relative z-10 text-center">{profile?.firstName} <br/> {profile?.lastName}</h3>
 
-                                    <div className="mt-4 bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 relative z-10 flex flex-col items-center">
-                                        <span className="text-[10px] text-indigo-200 font-bold uppercase tracking-widest mb-1">Okul Numarası</span>
-                                        <span className="text-xl font-black tracking-widest">{profile?.schoolNumber}</span>
+                                    <div className="flex-1 overflow-y-auto">
+                                        {displayedMessages.length === 0 ? (
+                                            <div className="p-10 text-center text-slate-400">
+                                                <p className="font-bold text-sm">Bu klasör şu an boş.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="divide-y divide-slate-100">
+                                                {displayedMessages.map(msg => (
+                                                    <div key={msg.id} onClick={() => handleReadMessage(msg)} className={`p-4 cursor-pointer hover:bg-slate-50 transition-colors flex flex-col gap-1 border-l-4 ${selectedMessage?.id === msg.id ? 'border-l-indigo-500 bg-indigo-50/30' : !msg.isRead && msg.type === 'INBOX' ? 'border-l-indigo-500 bg-slate-50' : 'border-l-transparent'}`}>
+                                                        <div className="flex justify-between items-baseline">
+                                                            <p className={`text-sm truncate ${!msg.isRead && msg.type === 'INBOX' ? 'font-black text-slate-900' : 'font-bold text-slate-700'}`}>
+                                                                {msg.type === 'INBOX' ? msg.sender : `Alıcı: ${msg.sender}`}
+                                                            </p>
+                                                            <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap ml-2">{msg.date}</span>
+                                                        </div>
+                                                        <p className={`text-sm truncate ${!msg.isRead && msg.type === 'INBOX' ? 'font-bold text-slate-800' : 'font-medium text-slate-500'}`}>{msg.subject}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* Kimlik Detaylar */}
-                                <div className="p-6 bg-white">
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sınıf</span>
-                                            <span className="text-sm font-black text-slate-800">{profile?.grade || 'Atanmadı'}</span>
+                                {/* SAĞ PANE: OKUMA / YAZMA */}
+                                <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col relative">
+                                    {rightPaneMode === 'EMPTY' && (
+                                        <div className="flex-1 flex flex-col items-center justify-center text-center p-10 bg-slate-50">
+                                            <div className="w-24 h-24 bg-slate-200 rounded-full flex items-center justify-center text-4xl mb-6 text-slate-400">✉️</div>
+                                            <p className="text-slate-500 font-medium text-base">İşlem yapmak için sol menüden bir mesaj seçin veya yeni mesaj oluşturun.</p>
                                         </div>
-                                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sistem Adı</span>
-                                            <span className="text-sm font-bold text-indigo-600">@{profile?.username}</span>
+                                    )}
+
+                                    {rightPaneMode === 'READ' && selectedMessage && (
+                                        <div className="flex flex-col h-full animate-fade-in">
+                                            <div className="p-8 border-b border-slate-100 bg-slate-50 shrink-0">
+                                                <h2 className="text-2xl font-black text-slate-800 mb-4">{selectedMessage.subject}</h2>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-lg font-black">
+                                                        {selectedMessage.sender.charAt(0)}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-bold text-slate-800">{mailBoxView === 'INBOX' ? 'Kimden:' : 'Kime:'} <span className="text-indigo-700">{selectedMessage.sender}</span></p>
+                                                        <p className="text-[11px] font-bold text-slate-400 mt-0.5">{selectedMessage.date} - {selectedMessage.time}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="p-8 flex-1 overflow-y-auto">
+                                                <div className="prose max-w-none text-slate-600 font-medium leading-relaxed whitespace-pre-wrap">
+                                                    {selectedMessage.content}
+                                                </div>
+                                            </div>
+                                            {mailBoxView === 'INBOX' && (
+                                                <div className="p-6 border-t border-slate-100 bg-slate-50 shrink-0 flex justify-end">
+                                                    <button onClick={() => {
+                                                        setMsgReceiverId(selectedMessage.sender);
+                                                        setMsgSubject(`RE: ${selectedMessage.subject}`);
+                                                        setRightPaneMode('COMPOSE');
+                                                    }} className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2">
+                                                        <span>↩️</span> Yanıtla
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Kayıtlı Veli</span>
-                                            <span className="text-sm font-bold text-slate-800">{profile?.parentFullName || 'Belirtilmemiş'}</span>
+                                    )}
+
+                                    {rightPaneMode === 'COMPOSE' && (
+                                        <div className="flex flex-col h-full animate-fade-in p-8">
+                                            <h3 className="text-xl font-black text-slate-800 mb-6">Yeni İleti Gönder</h3>
+                                            {userRole === 'ROLE_PARENT' && (
+                                                <div className="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg text-sm font-bold mb-4 flex items-center gap-2 border border-indigo-100">
+                                                    <span className="text-lg">🛡️</span> Bu mesaj sistem tarafından veli olarak işaretlenecektir.
+                                                </div>
+                                            )}
+                                            <form onSubmit={handleSendMessage} className="flex flex-col flex-1">
+                                                <div className="space-y-5 flex-1">
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Kime (Öğretmen ID giriniz) *</label>
+                                                        <input type="text" value={msgReceiverId} onChange={e => setMsgReceiverId(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all" placeholder="Öğretmen ID'si giriniz..." />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Konu *</label>
+                                                        <input type="text" value={msgSubject} onChange={e => setMsgSubject(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all" placeholder="Mesajınızın konusu..." />
+                                                    </div>
+                                                    <div className="flex-1 flex flex-col h-full min-h-[250px]">
+                                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Mesajınız *</label>
+                                                        <textarea value={msgContent} onChange={e => setMsgContent(e.target.value)} required className="flex-1 w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium focus:bg-white focus:border-indigo-500 outline-none transition-all resize-none" placeholder="Mesajınızı detaylıca yazın..." />
+                                                    </div>
+                                                </div>
+                                                <div className="pt-6 flex justify-end">
+                                                    <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-3 rounded-lg font-bold transition-all shadow-md">
+                                                        GÖNDER
+                                                    </button>
+                                                </div>
+                                            </form>
                                         </div>
-                                        <div className="flex justify-between items-center pb-1">
-                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Cinsiyet</span>
-                                            <span className="text-sm font-bold text-slate-800">{profile?.gender}</span>
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
+                    )}
 
-                    </div>
+                    {/* 👤 PROFİLİM SEKME (TAM SAYFA) */}
+                    {activeTab === 'profile' && (
+                        <div className="max-w-4xl mx-auto h-full">
+                            {profileViewMode === 'overview' && (
+                                <div className="animate-fade-in-down pb-10">
+                                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+                                        <div className="bg-indigo-900 p-10 text-white relative">
+                                            <div className="absolute right-0 top-0 w-48 h-48 bg-blue-500/20 rounded-full blur-[60px]"></div>
+                                            <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-4xl font-black shadow-inner border border-white/20 relative z-10 mb-6">
+                                                {getInitials(profile?.firstName, profile?.lastName)}
+                                            </div>
+                                            <h3 className="text-3xl font-black tracking-tight relative z-10">{profile?.firstName} {profile?.lastName}</h3>
+                                            <span className="inline-block mt-3 px-3 py-1 bg-indigo-500/40 border border-indigo-400 text-indigo-100 rounded-md text-xs font-bold tracking-widest uppercase relative z-10">
+                                                {profile?.grade} SINIFI ÖĞRENCİSİ
+                                            </span>
+                                        </div>
+                                        <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            <div>
+                                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-100 pb-2">İletişim Bilgileri</h4>
+                                                <div className="space-y-6">
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-slate-500 uppercase">Sistem Kullanıcı Adı</p>
+                                                        <p className="text-lg font-black text-indigo-600">@{profile?.username}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-slate-500 uppercase">Telefon Numarası</p>
+                                                        <p className="text-base font-bold text-slate-800">{profile?.phone || 'Belirtilmemiş'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-slate-500 uppercase">E-Posta Adresi</p>
+                                                        <p className="text-base font-bold text-slate-800">{profile?.email || 'Belirtilmemiş'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-100 pb-2 flex items-center gap-2">
+                                                    Kayıt Bilgileri
+                                                </h4>
+                                                <div className="space-y-6">
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-slate-500 uppercase">Okul Numarası</p>
+                                                        <p className="text-base font-bold text-slate-800">{profile?.schoolNumber}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-slate-500 uppercase">Kayıtlı Veli</p>
+                                                        <p className="text-base font-bold text-slate-800">{profile?.parentFullName || 'Belirtilmemiş'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <h3 className="text-xl font-black text-slate-800 mb-4">Hesap İşlemleri</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div onClick={() => setProfileViewMode('editPersonal')} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex items-center gap-4 group">
+                                            <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">👤</div>
+                                            <div>
+                                                <h4 className="font-bold text-slate-800">Kişisel Bilgileri Güncelle</h4>
+                                                <p className="text-xs text-slate-500 mt-1">Sistemdeki ad ve soyadınızı değiştirin.</p>
+                                            </div>
+                                        </div>
+                                        <div onClick={() => setProfileViewMode('editEmail')} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex items-center gap-4 group">
+                                            <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">✉️</div>
+                                            <div>
+                                                <h4 className="font-bold text-slate-800">E-Posta Değiştir</h4>
+                                                <p className="text-xs text-slate-500 mt-1">Sistem ve iletişim e-postanızı yenileyin.</p>
+                                            </div>
+                                        </div>
+                                        <div onClick={() => setProfileViewMode('editPhone')} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex items-center gap-4 group">
+                                            <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">📱</div>
+                                            <div>
+                                                <h4 className="font-bold text-slate-800">Telefon Numarası Değiştir</h4>
+                                                <p className="text-xs text-slate-500 mt-1">İletişim numaranızı güncelleyin.</p>
+                                            </div>
+                                        </div>
+                                        <div onClick={() => setProfileViewMode('editPassword')} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex items-center gap-4 group">
+                                            <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">🔒</div>
+                                            <div>
+                                                <h4 className="font-bold text-slate-800">Şifre Değiştir</h4>
+                                                <p className="text-xs text-slate-500 mt-1">Hesap güvenliğiniz için şifrenizi yenileyin.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {profileViewMode !== 'overview' && (
+                                <div className="animate-fade-in-right bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-slate-200">
+                                    <div className="flex items-center gap-4 mb-8 pb-4 border-b border-slate-100">
+                                        <button onClick={() => setProfileViewMode('overview')} className="text-slate-500 hover:text-slate-900 bg-slate-50 border border-slate-200 p-2 rounded-lg transition-all shadow-sm font-bold px-4">
+                                            GERİ DÖN
+                                        </button>
+                                        <div>
+                                            <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+                                                {profileViewMode === 'editPersonal' && 'KİŞİSEL BİLGİLERİ GÜNCELLE'}
+                                                {profileViewMode === 'editEmail' && 'E-POSTA ADRESİNİ DEĞİŞTİR'}
+                                                {profileViewMode === 'editPhone' && 'TELEFON NUMARASINI DEĞİŞTİR'}
+                                                {profileViewMode === 'editPassword' && 'SİSTEM ŞİFRESİNİ YENİLE'}
+                                            </h2>
+                                        </div>
+                                    </div>
+                                    <form onSubmit={handleProfileUpdate} className="space-y-6 max-w-2xl">
+                                        {profileViewMode === 'editPersonal' && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div>
+                                                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">Adınız *</label>
+                                                    <input type="text" value={updateForm.firstName} onChange={e => setUpdateForm({...updateForm, firstName: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all" required />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">Soyadınız *</label>
+                                                    <input type="text" value={updateForm.lastName} onChange={e => setUpdateForm({...updateForm, lastName: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all" required />
+                                                </div>
+                                            </div>
+                                        )}
+                                        {profileViewMode === 'editEmail' && (
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">Yeni E-Posta Adresi *</label>
+                                                <input type="email" value={updateForm.email} onChange={e => setUpdateForm({...updateForm, email: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all" required />
+                                            </div>
+                                        )}
+                                        {profileViewMode === 'editPhone' && (
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">Yeni Telefon Numarası *</label>
+                                                <input type="text" value={updateForm.phone} onChange={e => setUpdateForm({...updateForm, phone: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all" placeholder="05XX XXX XX XX" required />
+                                            </div>
+                                        )}
+                                        {profileViewMode === 'editPassword' && (
+                                            <div className="space-y-6">
+                                                <div>
+                                                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">Mevcut Şifreniz *</label>
+                                                    <input type="password" value={updateForm.currentPassword} onChange={e => setUpdateForm({...updateForm, currentPassword: e.target.value})} required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all" placeholder="Mevcut şifreniz" />
+                                                </div>
+                                                <div className="pt-4 border-t border-slate-100">
+                                                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">Yeni Şifre *</label>
+                                                    <input type="password" required value={updateForm.newPassword} onChange={e => setUpdateForm({...updateForm, newPassword: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all" placeholder="Yeni şifreniz" />
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-slate-100">
+                                            <button type="button" onClick={() => setProfileViewMode('overview')} className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-3 rounded-xl font-bold transition-all">
+                                                İPTAL
+                                            </button>
+                                            <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-md transition-all">
+                                                DEĞİŞİKLİKLERİ KAYDET
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </main>
 
