@@ -45,7 +45,8 @@ function App() {
             <Route path="/parent" element={<ParentPanel />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['ROLE_STUDENT']} />}>
+          {/* 🚀 DÜZELTME BURADA: Artık Veli (ROLE_PARENT) de Öğrenci odasına ışınlanabilir! */}
+          <Route element={<ProtectedRoute allowedRoles={['ROLE_STUDENT', 'ROLE_PARENT']} />}>
             <Route path="/student" element={<StudentPanel />} />
           </Route>
         </Routes>

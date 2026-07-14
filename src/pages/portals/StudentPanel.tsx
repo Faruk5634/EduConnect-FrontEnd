@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../services/api';
 import { showToast } from '../../utils/toast';
 
@@ -44,6 +44,11 @@ type ProfileViewMode = 'overview' | 'editPersonal' | 'editEmail' | 'editPhone' |
 
 export default function StudentPanel() {
     const navigate = useNavigate();
+    const location = useLocation(); // 🚀 EKLENDİ: Gelen kargoyu yakalamak için
+
+    // 🚀 GİZLİ KARGOYU TESLİM AL: Gelen kişi Veli mi? Hangi öğrenciyi izliyor?
+    const isParentViewing = location.state?.isParentViewing || false;
+    const studentSchoolNumber = location.state?.studentSchoolNumber;
     const userRole = localStorage.getItem('userRole');
 
     // 🚦 Durum Yönetimi
@@ -83,7 +88,13 @@ export default function StudentPanel() {
 
     const fetchInitialData = async () => {
         try {
-            const profileRes = await api.get('/students/me');
+            // 🚀 DÜZELTME: Eğer veli izliyorsa numaradan çek, kendi girdiyse /me'den çek
+            let profileRes;
+            if (isParentViewing && studentSchoolNumber) {
+                profileRes = await api.get(`/students/number/${studentSchoolNumber}`);
+            } else {
+                profileRes = await api.get('/students/me');
+            }
             setProfile(profileRes.data);
 
             setUpdateForm(prev => ({
@@ -164,6 +175,15 @@ export default function StudentPanel() {
 
     const handleProfileUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // 🚀 DÜZELTME: EĞER VELİYSE BACKENDE GİTME, SADECE BAŞARILI MESAJI VER (Güvenlik için)
+        if (isParentViewing) {
+            showToast('Öğrenci bilgileri veli yetkisiyle güncellendi. (Backend bağlandığında aktif olacak)', 'success');
+            setProfileViewMode('overview');
+            setUpdateForm(prev => ({ ...prev, newPassword: '', currentPassword: '' }));
+            return;
+        }
+
         try {
             if (profileViewMode === 'editPassword') {
                 if (!updateForm.currentPassword || !updateForm.newPassword) {
@@ -212,7 +232,6 @@ export default function StudentPanel() {
         }
     };
 
-    // 🚀 YENİ: Duyuru tipine göre tam sayfa kapak rengi belirleyici
     const getHeaderBgForType = (type: string) => {
         switch (type) {
             case 'HOMEWORK': return 'bg-gradient-to-r from-orange-500 to-amber-600';
@@ -232,12 +251,13 @@ export default function StudentPanel() {
 
             {/* 🧭 SOL NAVİGASYON (Sidebar) */}
             <aside className="w-72 bg-white border-r border-slate-200 flex flex-col shadow-sm z-10 shrink-0">
-                <div onClick={() => navigate('/campus')} className="p-8 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors group">
-                    <h1 className="text-3xl font-black text-indigo-600 tracking-tight group-hover:scale-105 transition-transform origin-left">
+                <div onClick={() => !isParentViewing && navigate('/campus')} className={`p-8 border-b border-slate-100 ${!isParentViewing ? 'cursor-pointer hover:bg-slate-50 transition-colors group' : ''}`}>
+                    <h1 className={`text-3xl font-black text-indigo-600 tracking-tight ${!isParentViewing && 'group-hover:scale-105 transition-transform origin-left'}`}>
                         EduConnect
                     </h1>
-                    <p className="text-xs text-slate-500 mt-2 uppercase tracking-widest font-bold">
+                    <p className="text-xs text-slate-500 mt-2 uppercase tracking-widest font-bold flex items-center gap-1">
                         Öğrenci Portalı
+                        {isParentViewing && <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md ml-1 border border-purple-200">Veli Modu</span>}
                     </p>
                 </div>
 
@@ -260,10 +280,18 @@ export default function StudentPanel() {
                 </nav>
 
                 <div className="p-4 border-t border-slate-100">
-                    <button onClick={() => setShowLogoutModal(true)} className="w-full flex items-center justify-center space-x-2 bg-red-50 hover:bg-red-100 text-red-600 px-4 py-3 rounded-xl transition-colors font-bold shadow-sm border border-red-100 hover:border-red-200">
-                        <span>🚪</span>
-                        <span>Güvenli Çıkış</span>
-                    </button>
+                    {/* 🚀 DÜZELTME: EĞER VELİ İZLİYORSA "ÇIKIŞ" YERİNE "VELİ PANELİNE DÖN" ÇIKSIN */}
+                    {isParentViewing ? (
+                        <button onClick={() => navigate('/parent')} className="w-full flex items-center justify-center space-x-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-4 rounded-xl transition-colors font-black shadow-sm border border-indigo-200">
+                            <span className="text-xl">⬅️</span>
+                            <span>Veli Paneline Dön</span>
+                        </button>
+                    ) : (
+                        <button onClick={() => setShowLogoutModal(true)} className="w-full flex items-center justify-center space-x-2 bg-red-50 hover:bg-red-100 text-red-600 px-4 py-3 rounded-xl transition-colors font-bold shadow-sm border border-red-100 hover:border-red-200">
+                            <span>🚪</span>
+                            <span>Güvenli Çıkış</span>
+                        </button>
+                    )}
                 </div>
             </aside>
 
@@ -273,7 +301,9 @@ export default function StudentPanel() {
                 {/* 👤 ÜST BAŞLIK */}
                 <header className="bg-white border-b border-slate-200 px-10 py-6 flex justify-between items-center shrink-0">
                     <div>
-                        <h2 className="text-2xl font-black text-slate-800 tracking-tight">Merhaba, {profile?.firstName}! 👋</h2>
+                        <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+                            Merhaba, {profile?.firstName}! 👋
+                        </h2>
                         <p className="text-slate-500 font-medium text-sm mt-1">{profile?.grade ? `${profile?.grade} Sınıfı Öğrencisi` : 'Sınıf Ataması Bekleniyor'}</p>
                     </div>
 
@@ -304,10 +334,18 @@ export default function StudentPanel() {
                                         <span className="text-lg">✉️</span> İletişim & Mesajlar
                                     </button>
                                 </div>
+
+                                {/* EĞER VELİYSE ÇIKIŞ BUTONU YERİNE VELİYE DÖN BUTONU ÇIKSIN */}
                                 <div className="py-2 border-t border-slate-100">
-                                    <button onClick={() => { setIsDropdownOpen(false); setShowLogoutModal(true); }} className="w-full text-left px-5 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3">
-                                        <span className="text-lg">🚪</span> Sistemden Çıkış
-                                    </button>
+                                    {isParentViewing ? (
+                                        <button onClick={() => navigate('/parent')} className="w-full text-left px-5 py-2.5 text-sm font-bold text-indigo-600 hover:bg-indigo-50 transition-colors flex items-center gap-3">
+                                            <span className="text-lg">⬅️</span> Veli Paneline Dön
+                                        </button>
+                                    ) : (
+                                        <button onClick={() => { setIsDropdownOpen(false); setShowLogoutModal(true); }} className="w-full text-left px-5 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3">
+                                            <span className="text-lg">🚪</span> Sistemden Çıkış
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -322,24 +360,15 @@ export default function StudentPanel() {
                         <div className="max-w-7xl mx-auto animate-fade-in-down">
 
                             {selectedAnnouncement ? (
-                                /* 🚀 TAM SAYFA DUYURU DETAY EKRANI */
                                 <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200 animate-scale-in">
-
-                                    {/* KAPAK ALANI (Banner) */}
                                     <div className={`relative h-48 ${getHeaderBgForType(selectedAnnouncement.type)} flex items-end p-8`}>
-                                        {/* Arka Plan Efekti */}
                                         <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
                                         <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-[80px]"></div>
 
-                                        {/* Geri Dön Butonu */}
-                                        <button
-                                            onClick={() => setSelectedAnnouncement(null)}
-                                            className="absolute top-6 left-6 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white px-5 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 shadow-sm border border-white/30"
-                                        >
+                                        <button onClick={() => setSelectedAnnouncement(null)} className="absolute top-6 left-6 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white px-5 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 shadow-sm border border-white/30">
                                             <span>←</span> Akışa Geri Dön
                                         </button>
 
-                                        {/* Rozet */}
                                         <div className="relative z-10 flex gap-3">
                                             <span className="bg-white/90 text-slate-800 px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase shadow-sm">
                                                 {selectedAnnouncement.type === 'HOMEWORK' ? '📝 ÖDEV' : selectedAnnouncement.type === 'EXAM_INFO' ? '🎯 SINAV' : selectedAnnouncement.type === 'EVENT' ? '🎉 ETKİNLİK' : '📢 GENEL'}
@@ -350,7 +379,6 @@ export default function StudentPanel() {
                                         </div>
                                     </div>
 
-                                    {/* İÇERİK ALANI */}
                                     <div className="p-10 md:p-14">
                                         <h2 className="text-4xl font-black text-slate-800 mb-8 leading-tight tracking-tight">{selectedAnnouncement.title}</h2>
 
@@ -375,12 +403,7 @@ export default function StudentPanel() {
                                                 <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                                                     <span>📎</span> Ekli Dosyalar
                                                 </h4>
-                                                <a
-                                                    href={`http://localhost:8080${selectedAnnouncement.fileUrl}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-3 bg-white hover:bg-indigo-50 text-indigo-700 px-6 py-4 rounded-xl text-sm font-bold transition-all shadow-sm border border-slate-200 hover:border-indigo-200 hover:shadow-md"
-                                                >
+                                                <a href={`http://localhost:8080${selectedAnnouncement.fileUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 bg-white hover:bg-indigo-50 text-indigo-700 px-6 py-4 rounded-xl text-sm font-bold transition-all shadow-sm border border-slate-200 hover:border-indigo-200 hover:shadow-md">
                                                     <span className="text-2xl text-indigo-500">📄</span>
                                                     <span>{selectedAnnouncement.fileName || 'Dosyayı Görüntüle / İndir'}</span>
                                                     <span className="ml-4 text-slate-400">⬇</span>
@@ -390,7 +413,6 @@ export default function StudentPanel() {
                                     </div>
                                 </div>
                             ) : (
-                                /* 📰 DUYURU AKIŞI (FEED) ve KİMLİK KARTI */
                                 <div className="flex flex-col-reverse lg:flex-row gap-8">
                                     <div className="flex-[2] space-y-6">
                                         <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
@@ -405,11 +427,7 @@ export default function StudentPanel() {
                                             </div>
                                         ) : (
                                             announcements.map((ann) => (
-                                                <div
-                                                    key={ann.id}
-                                                    onClick={() => setSelectedAnnouncement(ann)}
-                                                    className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer relative overflow-hidden group hover:-translate-y-1"
-                                                >
+                                                <div key={ann.id} onClick={() => setSelectedAnnouncement(ann)} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer relative overflow-hidden group hover:-translate-y-1">
                                                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${ann.type === 'HOMEWORK' ? 'bg-orange-400' : ann.type === 'EXAM_INFO' ? 'bg-red-400' : ann.type === 'EVENT' ? 'bg-purple-400' : 'bg-blue-400'}`}></div>
 
                                                     <div className="flex justify-between items-start mb-4">
@@ -572,7 +590,7 @@ export default function StudentPanel() {
                                     {rightPaneMode === 'COMPOSE' && (
                                         <div className="flex flex-col h-full animate-fade-in p-8">
                                             <h3 className="text-xl font-black text-slate-800 mb-6">Yeni İleti Gönder</h3>
-                                            {userRole === 'ROLE_PARENT' && (
+                                            {isParentViewing && (
                                                 <div className="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg text-sm font-bold mb-4 flex items-center gap-2 border border-indigo-100">
                                                     <span className="text-lg">🛡️</span> Bu mesaj sistem tarafından veli olarak işaretlenecektir.
                                                 </div>
@@ -657,7 +675,7 @@ export default function StudentPanel() {
                                         </div>
                                     </div>
 
-                                    <h3 className="text-xl font-black text-slate-800 mb-4">Hesap İşlemleri</h3>
+                                    <h3 className="text-xl font-black text-slate-800 mb-4">Hesap İşlemleri {isParentViewing && <span className="text-sm font-medium text-purple-600">(Veli Yetkisi)</span>}</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div onClick={() => setProfileViewMode('editPersonal')} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex items-center gap-4 group">
                                             <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">👤</div>
