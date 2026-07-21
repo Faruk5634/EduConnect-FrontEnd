@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import { showToast } from '../../utils/toast';
 
-// --- Arayüzler (Interfaces) ---
 interface ClassroomInfo {
     id: number;
     name: string;
@@ -29,15 +28,14 @@ interface Message {
     isRead: boolean;
     type: 'INBOX' | 'SENT';
     sender: string;
+    isSentByParent?: boolean;
 }
 
-// 📌 YENİ: Profil Düzenleme Sayfa Modları
 type ProfileViewMode = 'overview' | 'editPersonal' | 'editEmail' | 'editPhone' | 'editPassword';
 
 export default function TeacherPanel() {
     const navigate = useNavigate();
 
-    // 🚦 Durum Yönetimi
     const [activeTab, setActiveTab] = useState('overview');
     const [profile, setProfile] = useState<TeacherProfile | null>(null);
     const [allClassrooms, setAllClassrooms] = useState<ClassroomInfo[]>([]);
@@ -45,7 +43,6 @@ export default function TeacherPanel() {
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-    // 📢 Duyuru State'leri
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [type, setType] = useState('GENERAL');
@@ -53,7 +50,6 @@ export default function TeacherPanel() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // ✉️ E-Posta State'leri
     const [messages, setMessages] = useState<Message[]>([]);
     const [mailBoxView, setMailBoxView] = useState<'INBOX' | 'SENT'>('INBOX');
     const [rightPaneMode, setRightPaneMode] = useState<'EMPTY' | 'READ' | 'COMPOSE'>('EMPTY');
@@ -62,27 +58,44 @@ export default function TeacherPanel() {
     const [msgContent, setMsgContent] = useState('');
     const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
 
-    // 👤 Profil Düzenleme State'leri (TAM SAYFA İÇİN)
+    const [userSearchQuery, setUserSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<{userId: number, fullName: string, role: string}[]>([]);
+    const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+    const [selectedReceiverName, setSelectedReceiverName] = useState('');
+
     const [profileViewMode, setProfileViewMode] = useState<ProfileViewMode>('overview');
     const [updateForm, setUpdateForm] = useState({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        currentPassword: '',
-        newPassword: ''
+        firstName: '', lastName: '', email: '', phone: '', currentPassword: '', newPassword: ''
     });
 
     useEffect(() => {
         fetchInitialData();
     }, []);
 
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(async () => {
+            if (userSearchQuery.length >= 2) {
+                try {
+                    const res = await api.get(`/messages/search-users?keyword=${userSearchQuery}`);
+                    setSearchResults(res.data);
+                    setShowSearchDropdown(true);
+                } catch (error) {
+                    console.error("Arama hatası", error);
+                }
+            } else {
+                setSearchResults([]);
+                setShowSearchDropdown(false);
+            }
+        }, 400);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [userSearchQuery]);
+
     const fetchInitialData = async () => {
         try {
             const profileRes = await api.get('/teachers/me');
             setProfile(profileRes.data);
 
-            // Profil güncelleme formu için ön dolum
             setUpdateForm(prev => ({
                 ...prev,
                 firstName: profileRes.data.firstName,
@@ -155,10 +168,17 @@ export default function TeacherPanel() {
         }
     };
 
+    const handleSelectUser = (user: any) => {
+        setMsgReceiverId(user.userId.toString());
+        setSelectedReceiverName(`${user.fullName} (${user.role})`);
+        setShowSearchDropdown(false);
+        setUserSearchQuery('');
+    };
+
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!msgReceiverId) {
-            showToast('Lütfen bir alıcı seçin.', 'error');
+            showToast('Lütfen listeden bir alıcı seçin.', 'error');
             return;
         }
         try {
@@ -169,7 +189,9 @@ export default function TeacherPanel() {
             });
 
             showToast('Mesaj başarıyla gönderildi!', 'success');
+
             setMsgReceiverId('');
+            setSelectedReceiverName('');
             setMsgSubject('');
             setMsgContent('');
             setRightPaneMode('EMPTY');
@@ -195,7 +217,6 @@ export default function TeacherPanel() {
         }
     };
 
-    // 👤 YENİ: Geniş Ekran Profil Kaydetme Motoru
     const handleProfileUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
@@ -218,7 +239,7 @@ export default function TeacherPanel() {
             showToast('Profil bilgileriniz başarıyla güncellendi.', 'success');
             setProfileViewMode('overview');
             setUpdateForm(prev => ({ ...prev, newPassword: '', currentPassword: '' }));
-            await fetchInitialData(); // Verileri tazele
+            await fetchInitialData();
         } catch (err: any) {
             const serverMsg = err?.response?.data || 'Profil güncellenemedi.';
             showToast(serverMsg, 'error');
@@ -464,8 +485,9 @@ export default function TeacherPanel() {
                                                         className={`p-4 cursor-pointer hover:bg-slate-50 transition-colors flex flex-col gap-1 border-l-4 ${selectedMessage?.id === msg.id ? 'border-l-blue-500 bg-blue-50/30' : !msg.isRead && msg.type === 'INBOX' ? 'border-l-blue-500 bg-slate-50' : 'border-l-transparent'}`}
                                                     >
                                                         <div className="flex justify-between items-baseline">
-                                                            <p className={`text-sm truncate ${!msg.isRead && msg.type === 'INBOX' ? 'font-black text-slate-900' : 'font-bold text-slate-700'}`}>
+                                                            <p className={`text-sm truncate flex items-center ${!msg.isRead && msg.type === 'INBOX' ? 'font-black text-slate-900' : 'font-bold text-slate-700'}`}>
                                                                 {msg.type === 'INBOX' ? msg.sender : `Alıcı: ${msg.sender}`}
+                                                                {msg.isSentByParent && <span className="ml-1 text-purple-600 text-[10px]" title="Veli Mührü">🛡️</span>}
                                                             </p>
                                                             <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap ml-2">{msg.date}</span>
                                                         </div>
@@ -499,6 +521,12 @@ export default function TeacherPanel() {
                                                         <div>
                                                             <p className="text-sm font-bold text-slate-800">{mailBoxView === 'INBOX' ? 'Kimden:' : 'Kime:'} <span className="text-emerald-700">{selectedMessage.sender}</span></p>
                                                             <p className="text-[11px] font-bold text-slate-400 mt-0.5">{selectedMessage.date} - {selectedMessage.time}</p>
+
+                                                            {selectedMessage.isSentByParent && (
+                                                                <span className="inline-block mt-2 bg-purple-100 text-purple-700 border border-purple-200 px-3 py-1 rounded-md text-[10px] font-black tracking-widest uppercase shadow-sm">
+                                                                    🛡️ VELİ TARAFINDAN GÖNDERİLDİ
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -512,6 +540,7 @@ export default function TeacherPanel() {
                                                 <div className="p-6 border-t border-slate-100 bg-slate-50 shrink-0 flex justify-end">
                                                     <button onClick={() => {
                                                         setMsgReceiverId(selectedMessage.sender);
+                                                        setSelectedReceiverName(selectedMessage.sender);
                                                         setMsgSubject(`RE: ${selectedMessage.subject}`);
                                                         setRightPaneMode('COMPOSE');
                                                     }} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2">
@@ -523,34 +552,68 @@ export default function TeacherPanel() {
                                     )}
 
                                     {rightPaneMode === 'COMPOSE' && (
-                                        <div className="flex flex-col h-full animate-fade-in p-8">
-                                            <h3 className="text-xl font-black text-slate-800 mb-6">Yeni İleti Gönder</h3>
-                                            <form onSubmit={handleSendMessage} className="flex flex-col flex-1">
+                                        <div className="flex flex-col h-full animate-fade-in p-6 overflow-hidden">
+                                            <h3 className="text-xl font-black text-slate-800 mb-4 shrink-0">Yeni İleti Gönder</h3>
+
+                                            <form onSubmit={handleSendMessage} className="flex flex-col flex-1 overflow-y-auto pr-2 pb-4">
                                                 <div className="space-y-5 flex-1">
-                                                    <div>
+
+                                                    {/* 🚀 AKILLI ARAMA ÇUBUĞU (AUTOCOMPLETE) */}
+                                                    <div className="relative z-20">
                                                         <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Kime (Alıcı Seçin) *</label>
-                                                        <select
-                                                            value={msgReceiverId}
-                                                            onChange={e => setMsgReceiverId(e.target.value)}
-                                                            required
-                                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-bold focus:bg-white focus:border-blue-500 outline-none transition-all cursor-pointer"
-                                                        >
-                                                            <option value="" disabled>Alıcı seçiniz...</option>
-                                                            <option value="ALL">📢 Tüm Okul Yöneticilerine (Toplu)</option>
-                                                            <option value="SUPER_ADMIN">⚙️ Sistem Yöneticisine (Teknik Destek)</option>
-                                                            <option value="" disabled>--- veya öğrenci/veli ID'si girin ---</option>
-                                                        </select>
-                                                        {(!['ALL', 'SUPER_ADMIN'].includes(msgReceiverId) && msgReceiverId !== '') && (
-                                                            <input
-                                                                type="text"
-                                                                value={msgReceiverId}
-                                                                onChange={e => setMsgReceiverId(e.target.value)}
-                                                                className="w-full mt-2 bg-white border border-slate-200 rounded-lg px-4 py-3 text-sm font-bold focus:border-blue-500 outline-none transition-all"
-                                                                placeholder="Özel ID giriniz..."
-                                                            />
+                                                        {selectedReceiverName ? (
+                                                            <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 shadow-sm">
+                                                                <span className="font-bold text-blue-800">{selectedReceiverName}</span>
+                                                                <button type="button" onClick={() => {setMsgReceiverId(''); setSelectedReceiverName('');}} className="text-blue-500 hover:text-red-500 font-bold transition-colors text-sm px-2">
+                                                                    ✕ Değiştir
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div>
+                                                                <div className="relative">
+                                                                    <input
+                                                                        type="text"
+                                                                        value={userSearchQuery}
+                                                                        onChange={e => setUserSearchQuery(e.target.value)}
+                                                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 pr-10 text-sm font-bold focus:bg-white focus:border-blue-500 outline-none transition-all shadow-inner"
+                                                                        placeholder="Kişi aramak için isim veya kullanıcı adı yazın (En az 2 harf)..."
+                                                                    />
+                                                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                                                                </div>
+
+                                                                {/* HIZLI SEÇİM BUTONLARI */}
+                                                                <div className="flex gap-2 mt-3">
+                                                                    <button type="button" onClick={() => { setMsgReceiverId('ALL'); setSelectedReceiverName('📢 Tüm Okul Yöneticilerine (Toplu)'); }} className="text-[10px] font-bold bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-700 px-3 py-1.5 rounded-md transition-colors border border-slate-200 hover:border-blue-200">
+                                                                        + Tüm İdarecilere Gönder
+                                                                    </button>
+                                                                    <button type="button" onClick={() => { setMsgReceiverId('SUPER_ADMIN'); setSelectedReceiverName('⚙️ Sistem Yöneticisine (Teknik Destek)'); }} className="text-[10px] font-bold bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-700 px-3 py-1.5 rounded-md transition-colors border border-slate-200 hover:border-blue-200">
+                                                                        + Sistem Yöneticisine Gönder
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* DROPDOWN */}
+                                                                <div className="relative">
+                                                                    {showSearchDropdown && searchResults.length > 0 && (
+                                                                        <div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in-down">
+                                                                            {searchResults.map((user: any) => (
+                                                                                <div key={user.userId} onClick={() => handleSelectUser(user)} className="px-5 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between transition-colors">
+                                                                                    <p className="text-sm font-bold text-slate-800">{user.fullName}</p>
+                                                                                    <p className="text-[10px] font-black text-blue-600 bg-blue-100 px-2 py-1 rounded uppercase tracking-widest">{user.role}</p>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                    {showSearchDropdown && searchResults.length === 0 && userSearchQuery.length >= 2 && (
+                                                                        <div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl px-5 py-4 text-sm text-slate-500 text-center font-medium">
+                                                                            Sistemde bu isme ait kişi bulunamadı.
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
                                                         )}
                                                     </div>
-                                                    <div>
+
+                                                    <div className="relative z-10 shrink-0">
                                                         <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Konu *</label>
                                                         <input
                                                             type="text"
@@ -561,18 +624,18 @@ export default function TeacherPanel() {
                                                             placeholder="Mesajınızın konusu..."
                                                         />
                                                     </div>
-                                                    <div className="flex-1 flex flex-col h-full min-h-[250px]">
+                                                    <div className="flex flex-col min-h-[150px] relative z-0 flex-1">
                                                         <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Mesajınız *</label>
                                                         <textarea
                                                             value={msgContent}
                                                             onChange={e => setMsgContent(e.target.value)}
                                                             required
-                                                            className="flex-1 w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium focus:bg-white focus:border-blue-500 outline-none transition-all resize-none"
+                                                            className="flex-1 w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium focus:bg-white focus:border-blue-500 outline-none transition-all resize-none min-h-[150px]"
                                                             placeholder="Mesajınızı detaylıca yazın..."
                                                         />
                                                     </div>
                                                 </div>
-                                                <div className="pt-6 flex justify-end">
+                                                <div className="pt-6 shrink-0 flex justify-end">
                                                     <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-3 rounded-lg font-bold transition-all shadow-md">
                                                         GÖNDER
                                                     </button>
@@ -589,7 +652,6 @@ export default function TeacherPanel() {
                     {activeTab === 'profile' && (
                         <div className="max-w-4xl mx-auto h-full">
 
-                            {/* OVERVIEW (GENEL BAKIŞ) MODU */}
                             {profileViewMode === 'overview' && (
                                 <div className="animate-fade-in-down pb-10">
                                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
@@ -677,7 +739,6 @@ export default function TeacherPanel() {
                                 </div>
                             )}
 
-                            {/* DÜZENLEME MODLARI (TAM SAYFA FORM) */}
                             {profileViewMode !== 'overview' && (
                                 <div className="animate-fade-in-right bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-slate-200">
                                     <div className="flex items-center gap-4 mb-8 pb-4 border-b border-slate-100">
