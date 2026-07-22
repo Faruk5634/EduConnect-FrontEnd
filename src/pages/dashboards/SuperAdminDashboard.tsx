@@ -1,40 +1,58 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import CampusManagementTab from '../../components/super-admin/CampusManagementTab';
 import AdminManagementTab from '../../components/super-admin/AdminManagementTab';
 import SystemLogsTab from '../../components/super-admin/SystemLogsTab';
 import ContactTab from '../../components/shared/ContactTab';
-import ProfileTab from '../../components/shared/ProfileTab'; // 👈 YENİ LEGO PARÇAMIZ
+import ProfileTab from '../../components/shared/ProfileTab';
 
 const SuperAdminDashboard: React.FC = () => {
     const navigate = useNavigate();
 
-    // 🚦 Durum Yönetimleri
     const [activeTab, setActiveTab] = useState('overview');
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-    // Sağ üst mini rozet için basit profil datası
     const [headerProfileName, setHeaderProfileName] = useState('Yükleniyor...');
     const [headerProfileEmail, setHeaderProfileEmail] = useState('');
 
-    // 📈 Gösterge Paneli Verileri
     const [stats, setStats] = useState({ campuses: 0, admins: 0, totalUsers: 0 });
     const [loadingStats, setLoadingStats] = useState(true);
 
-    // 🛡️ GERİ TUŞU KORUMASI (Anti-Sızıntı Motoru)
+    // 🧠 1. ADIM: Sayfanın ana ekranda olup olmadığını takip et
+    const isNotHome = activeTab !== 'overview';
+    const isNotHomeRef = useRef(isNotHome);
+
     useEffect(() => {
-        window.history.pushState(null, "", window.location.pathname);
+        // 2. ADIM: Başlangıçta Base (Zemin) ve Trap (Tuzak) state'lerini kur
+        window.history.replaceState({ page: 'base' }, "", window.location.href);
+        window.history.pushState({ page: 'trap' }, "", window.location.href);
+
         const handlePopState = () => {
-            window.history.pushState(null, "", window.location.pathname);
-            setShowLogoutModal(true);
+            if (isNotHomeRef.current) {
+                // Eğer alt sayfadaysak anasayfaya dön (Tarayıcı Trap state'ine düştü)
+                setActiveTab('overview');
+            } else {
+                // Ana sayfadaysak çıkış sor ve kullanıcıyı sayfada tutmak için Trap'i geri koy
+                setShowLogoutModal(true);
+                window.history.pushState({ page: 'trap' }, "", window.location.href);
+            }
         };
+
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
     }, []);
 
-    // 📡 Verileri Arka Plandan Çekme Motoru
+    useEffect(() => {
+        // 3. ADIM: Kullanıcı sekmelerde gezinirken durumu izle ve gerekirse History'e ekle
+        if (isNotHome && !isNotHomeRef.current) {
+            // Ana sayfadan ilk defa başka bir sekmeye geçildi, geçmişe iz bırak
+            window.history.pushState({ page: 'subpage' }, "", window.location.href);
+        }
+        isNotHomeRef.current = isNotHome;
+    }, [isNotHome]);
+
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
@@ -61,14 +79,12 @@ const SuperAdminDashboard: React.FC = () => {
         fetchDashboardData();
     }, [activeTab]);
 
-    // 🚪 Güvenli Çıkış Motoru
+    // 🚪 🚀 GÜVENLİ ÇIKIŞ
     const handleLogoutConfirm = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('userRole');
-        navigate('/');
+        localStorage.clear();
+        navigate('/', { replace: true });
     };
 
-    // 🎨 Sol Menü Butonlarının Renk Motoru
     const getTabClass = (tabName: string) => {
         return `w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all group ${
             activeTab === tabName
@@ -77,7 +93,6 @@ const SuperAdminDashboard: React.FC = () => {
         }`;
     };
 
-    // 🔠 İsim Baş harflerini alma
     const getInitials = (name: string) => {
         if (!name || name === 'Yükleniyor...') return 'SA';
         return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
@@ -86,7 +101,6 @@ const SuperAdminDashboard: React.FC = () => {
     return (
         <div className="min-h-screen bg-slate-950 text-slate-300 flex font-sans selection:bg-blue-500/30 relative">
 
-            {/* 🧭 Sol Navigasyon (Sidebar) */}
             <aside className="w-72 bg-slate-900 border-r border-slate-800 flex flex-col shadow-2xl z-10">
                 <div className="p-8 border-b border-slate-800/60">
                     <h1 onClick={() => setActiveTab('overview')} className="text-3xl cursor-pointer font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500 tracking-tight">
@@ -133,11 +147,9 @@ const SuperAdminDashboard: React.FC = () => {
                 </div>
             </aside>
 
-            {/* 📡 Ana Radar Ekranı (Main Content) */}
             <main className="flex-1 overflow-y-auto relative bg-slate-950 pb-20">
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-[100px] pointer-events-none"></div>
 
-                {/* 👤 SAĞ ÜST AÇILIR MENÜ (SADECE ANA SAYFADA GÖRÜNÜR) */}
                 {activeTab === 'overview' && (
                     <div className="absolute top-8 right-10 z-30">
                         {isDropdownOpen && <div className="fixed inset-0 z-20" onClick={() => setIsDropdownOpen(false)}></div>}
@@ -177,7 +189,6 @@ const SuperAdminDashboard: React.FC = () => {
                     </div>
                 )}
 
-                {/* 🧩 DİNAMİK İÇERİK ALANI */}
                 {activeTab === 'overview' && (
                     <div className="p-10 relative z-10 animate-fade-in-down">
                         <header className="flex justify-between items-center mb-12">
@@ -186,7 +197,6 @@ const SuperAdminDashboard: React.FC = () => {
                                 <p className="text-slate-400 mt-2 text-lg">Tüm kampüslerin canlı verileri ve genel özet</p>
                             </div>
                         </header>
-
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
                             <div onClick={() => setActiveTab('campuses')} className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 p-7 rounded-3xl shadow-xl hover:-translate-y-1 transition-transform duration-300 group cursor-pointer">
@@ -221,19 +231,17 @@ const SuperAdminDashboard: React.FC = () => {
                     </div>
                 )}
 
-                {/* Sekmeler */}
                 {activeTab === 'campuses' && <div className="p-6 relative z-10 animate-fade-in-down h-full bg-slate-100 rounded-tl-3xl"><CampusManagementTab /></div>}
                 {activeTab === 'admins' && <div className="h-full"><AdminManagementTab /></div>}
                 {activeTab === 'logs' && <div className="h-full"><SystemLogsTab /></div>}
                 {activeTab === 'messages' && <div className="h-full"><ContactTab /></div>}
                 {activeTab === 'profile' && <div className="h-full"><ProfileTab /></div>}
-                {/* Footer */}
+
                 <footer className="w-full text-center py-6 text-slate-400 bg-slate-950/30 border-t border-slate-800/30 mt-20 fixed left-72 right-0 bottom-0">
                     <div className="max-w-5xl mx-auto">© {new Date().getFullYear()} EduConnect — Tüm hakları saklıdır.</div>
                 </footer>
             </main>
 
-            {/* 🚨 ÇIKIŞ ONAY PENCERESİ */}
             {showLogoutModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in">
                     <div className="bg-white rounded-md shadow-2xl w-full max-w-md p-6 border border-slate-200 relative animate-scale-in">

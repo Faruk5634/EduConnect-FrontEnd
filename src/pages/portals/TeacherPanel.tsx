@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import { showToast } from '../../utils/toast';
@@ -67,6 +67,37 @@ export default function TeacherPanel() {
     const [updateForm, setUpdateForm] = useState({
         firstName: '', lastName: '', email: '', phone: '', currentPassword: '', newPassword: ''
     });
+
+    // 🧠 GERİ TUŞU KORUMASI (Akıllı Durum Tahsisi)
+    const isNotHome = activeTab !== 'overview' || profileViewMode !== 'overview' || rightPaneMode !== 'EMPTY';
+    const isNotHomeRef = useRef(isNotHome);
+
+    useEffect(() => {
+        window.history.replaceState({ page: 'base' }, "", window.location.href);
+        window.history.pushState({ page: 'trap' }, "", window.location.href);
+
+        const handlePopState = () => {
+            if (isNotHomeRef.current) {
+                setActiveTab('overview');
+                setProfileViewMode('overview');
+                setRightPaneMode('EMPTY');
+            } else {
+                setShowLogoutModal(true);
+                window.history.pushState({ page: 'trap' }, "", window.location.href);
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
+
+    useEffect(() => {
+        if (isNotHome && !isNotHomeRef.current) {
+            window.history.pushState({ page: 'subpage' }, "", window.location.href);
+        }
+        isNotHomeRef.current = isNotHome;
+    }, [isNotHome]);
+
 
     useEffect(() => {
         fetchInitialData();
@@ -246,9 +277,9 @@ export default function TeacherPanel() {
         }
     };
 
-    const handleLogout = () => {
+    const handleLogoutConfirm = () => {
         localStorage.clear();
-        navigate('/');
+        navigate('/', { replace: true });
     };
 
     const getInitials = (first?: string, last?: string) => {
@@ -264,7 +295,6 @@ export default function TeacherPanel() {
     return (
         <div className="min-h-screen bg-slate-50 text-slate-800 flex font-sans selection:bg-emerald-500/30">
 
-            {/* 🧭 SOL NAVİGASYON */}
             <aside className="w-72 bg-white border-r border-slate-200 flex flex-col shadow-sm z-10 shrink-0">
                 <div
                     onClick={() => { setActiveTab('overview'); setProfileViewMode('overview'); }}
@@ -301,10 +331,8 @@ export default function TeacherPanel() {
                 </div>
             </aside>
 
-            {/* 📡 ANA İÇERİK EKRANI */}
             <main className="flex-1 flex flex-col h-screen overflow-hidden">
 
-                {/* 👤 ÜST BAŞLIK */}
                 <header className="bg-white border-b border-slate-200 px-10 py-6 flex justify-between items-center shrink-0">
                     <div>
                         <h2 className="text-2xl font-black text-slate-800 tracking-tight">Hoş Geldiniz, {profile?.firstName} Öğretmenim!</h2>
@@ -337,10 +365,8 @@ export default function TeacherPanel() {
                     </div>
                 </header>
 
-                {/* 🧩 SEKMELER (TABS) */}
                 <div className="flex-1 overflow-y-auto p-10 bg-slate-50/50 relative">
 
-                    {/* 🏠 ANASAYFA SEKME */}
                     {activeTab === 'overview' && (
                         <div className="max-w-6xl mx-auto space-y-8 animate-fade-in-down">
                             <div className="bg-gradient-to-r from-emerald-600 to-teal-800 rounded-3xl p-10 text-white shadow-lg relative overflow-hidden">
@@ -378,7 +404,6 @@ export default function TeacherPanel() {
                         </div>
                     )}
 
-                    {/* 📢 DUYURU PANELİ SEKME */}
                     {activeTab === 'announcements' && (
                         <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8 animate-fade-in-down">
                             <div className="flex items-center gap-3 mb-8 pb-4 border-b border-slate-100">
@@ -450,7 +475,6 @@ export default function TeacherPanel() {
                         </div>
                     )}
 
-                    {/* ✉️ MESAJLAR (GELİŞMİŞ E-POSTA KUTUSU) SEKME */}
                     {activeTab === 'messages' && (
                         <div className="max-w-7xl mx-auto flex flex-col h-[calc(100vh-150px)] animate-fade-in">
                             <div className="mb-4 flex items-center justify-between">
@@ -464,7 +488,6 @@ export default function TeacherPanel() {
                             </div>
 
                             <div className="flex-1 flex gap-6 overflow-hidden">
-                                {/* SOL PANE: LİSTE */}
                                 <div className="w-1/3 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
                                     <div className="flex border-b border-slate-100 bg-slate-50">
                                         <button onClick={() => {setMailBoxView('INBOX'); setRightPaneMode('EMPTY');}} className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${mailBoxView === 'INBOX' ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>Gelen Kutusu</button>
@@ -499,18 +522,17 @@ export default function TeacherPanel() {
                                     </div>
                                 </div>
 
-                                {/* SAĞ PANE: OKUMA / YAZMA */}
                                 <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col relative">
 
                                     {rightPaneMode === 'EMPTY' && (
-                                        <div className="flex-1 flex flex-col items-center justify-center text-center p-10 bg-slate-50">
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-10 bg-slate-50">
                                             <div className="w-24 h-24 bg-slate-200 rounded-full flex items-center justify-center text-4xl mb-6 text-slate-400">✉️</div>
                                             <p className="text-slate-500 font-medium text-base">İşlem yapmak için sol menüden bir mesaj seçin veya yeni mesaj oluşturun.</p>
                                         </div>
                                     )}
 
                                     {rightPaneMode === 'READ' && selectedMessage && (
-                                        <div className="flex flex-col h-full animate-fade-in">
+                                        <div className="absolute inset-0 flex flex-col animate-fade-in bg-white">
                                             <div className="p-8 border-b border-slate-100 bg-slate-50 shrink-0">
                                                 <h2 className="text-2xl font-black text-slate-800 mb-4">{selectedMessage.subject}</h2>
                                                 <div className="flex justify-between items-center">
@@ -552,13 +574,11 @@ export default function TeacherPanel() {
                                     )}
 
                                     {rightPaneMode === 'COMPOSE' && (
-                                        <div className="flex flex-col h-full animate-fade-in p-6 overflow-hidden">
-                                            <h3 className="text-xl font-black text-slate-800 mb-4 shrink-0">Yeni İleti Gönder</h3>
+                                        <div className="absolute inset-0 flex flex-col p-8 animate-fade-in bg-white">
+                                            <h3 className="text-xl font-black text-slate-800 mb-6 shrink-0">Yeni İleti Gönder</h3>
 
-                                            <form onSubmit={handleSendMessage} className="flex flex-col flex-1 overflow-y-auto pr-2 pb-4">
-                                                <div className="space-y-5 flex-1">
-
-                                                    {/* 🚀 AKILLI ARAMA ÇUBUĞU (AUTOCOMPLETE) */}
+                                            <form onSubmit={handleSendMessage} className="flex flex-col flex-1 overflow-y-auto pr-2 pb-2">
+                                                <div className="space-y-6">
                                                     <div className="relative z-20">
                                                         <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Kime (Alıcı Seçin) *</label>
                                                         {selectedReceiverName ? (
@@ -570,18 +590,19 @@ export default function TeacherPanel() {
                                                             </div>
                                                         ) : (
                                                             <div>
-                                                                <div className="relative">
+                                                                <div className="relative flex items-center w-full">
                                                                     <input
                                                                         type="text"
                                                                         value={userSearchQuery}
                                                                         onChange={e => setUserSearchQuery(e.target.value)}
-                                                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 pr-10 text-sm font-bold focus:bg-white focus:border-blue-500 outline-none transition-all shadow-inner"
+                                                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 pr-12 text-sm font-bold focus:bg-white focus:border-blue-500 outline-none transition-all shadow-inner"
                                                                         placeholder="Kişi aramak için isim veya kullanıcı adı yazın (En az 2 harf)..."
                                                                     />
-                                                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                                                                    <div className="absolute right-4 text-slate-400 pointer-events-none flex items-center justify-center">
+                                                                        🔍
+                                                                    </div>
                                                                 </div>
 
-                                                                {/* HIZLI SEÇİM BUTONLARI */}
                                                                 <div className="flex gap-2 mt-3">
                                                                     <button type="button" onClick={() => { setMsgReceiverId('ALL'); setSelectedReceiverName('📢 Tüm Okul Yöneticilerine (Toplu)'); }} className="text-[10px] font-bold bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-700 px-3 py-1.5 rounded-md transition-colors border border-slate-200 hover:border-blue-200">
                                                                         + Tüm İdarecilere Gönder
@@ -591,7 +612,6 @@ export default function TeacherPanel() {
                                                                     </button>
                                                                 </div>
 
-                                                                {/* DROPDOWN */}
                                                                 <div className="relative">
                                                                     {showSearchDropdown && searchResults.length > 0 && (
                                                                         <div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in-down">
@@ -624,18 +644,19 @@ export default function TeacherPanel() {
                                                             placeholder="Mesajınızın konusu..."
                                                         />
                                                     </div>
-                                                    <div className="flex flex-col min-h-[150px] relative z-0 flex-1">
+                                                    <div className="flex flex-col relative z-0 flex-1 min-h-[150px]">
                                                         <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Mesajınız *</label>
                                                         <textarea
                                                             value={msgContent}
                                                             onChange={e => setMsgContent(e.target.value)}
                                                             required
-                                                            className="flex-1 w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium focus:bg-white focus:border-blue-500 outline-none transition-all resize-none min-h-[150px]"
+                                                            className="flex-1 w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium focus:bg-white focus:border-blue-500 outline-none transition-all resize-y min-h-[150px]"
                                                             placeholder="Mesajınızı detaylıca yazın..."
                                                         />
                                                     </div>
                                                 </div>
-                                                <div className="pt-6 shrink-0 flex justify-end">
+
+                                                <div className="pt-8 pb-4 shrink-0 flex justify-end mt-auto">
                                                     <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-3 rounded-lg font-bold transition-all shadow-md">
                                                         GÖNDER
                                                     </button>
@@ -648,7 +669,6 @@ export default function TeacherPanel() {
                         </div>
                     )}
 
-                    {/* 👤 PROFİLİM (TAM SAYFA DÜZENLEME) SEKME */}
                     {activeTab === 'profile' && (
                         <div className="max-w-4xl mx-auto h-full">
 
@@ -812,7 +832,6 @@ export default function TeacherPanel() {
                 </div>
             </main>
 
-            {/* 🚨 ÇIKIŞ ONAY PENCERESİ */}
             {showLogoutModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 border border-slate-200 relative text-center">
@@ -821,7 +840,7 @@ export default function TeacherPanel() {
                         <p className="text-slate-500 font-medium text-sm mt-2 mb-8">Oturumunuzu sonlandırmak istediğinize emin misiniz?</p>
                         <div className="flex justify-center gap-4">
                             <button onClick={() => setShowLogoutModal(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-bold transition-colors">İPTAL</button>
-                            <button onClick={handleLogout} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold transition-all shadow-md">ÇIKIŞ YAP</button>
+                            <button onClick={handleLogoutConfirm} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold transition-all shadow-md">ÇIKIŞ YAP</button>
                         </div>
                     </div>
                 </div>

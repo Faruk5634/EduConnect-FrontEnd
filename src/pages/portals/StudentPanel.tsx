@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../services/api';
 import { showToast } from '../../utils/toast';
@@ -48,7 +48,6 @@ export default function StudentPanel() {
 
     const isParentViewing = location.state?.isParentViewing || false;
     const studentSchoolNumber = location.state?.studentSchoolNumber;
-    const userRole = localStorage.getItem('userRole');
 
     const [activeTab, setActiveTab] = useState('announcements');
     const [profile, setProfile] = useState<StudentProfile | null>(null);
@@ -76,6 +75,39 @@ export default function StudentPanel() {
     const [updateForm, setUpdateForm] = useState({
         firstName: '', lastName: '', email: '', phone: '', currentPassword: '', newPassword: ''
     });
+
+    // 🧠 GERİ TUŞU KORUMASI (Akıllı Durum Tahsisi)
+    // Öğrenci panelinde anasayfa 'announcements' (Duyurular) sekmesidir!
+    const isNotHome = activeTab !== 'announcements' || profileViewMode !== 'overview' || rightPaneMode !== 'EMPTY' || selectedAnnouncement !== null;
+    const isNotHomeRef = useRef(isNotHome);
+
+    useEffect(() => {
+        window.history.replaceState({ page: 'base' }, "", window.location.href);
+        window.history.pushState({ page: 'trap' }, "", window.location.href);
+
+        const handlePopState = () => {
+            if (isNotHomeRef.current) {
+                setActiveTab('announcements');
+                setProfileViewMode('overview');
+                setRightPaneMode('EMPTY');
+                setSelectedAnnouncement(null);
+            } else {
+                setShowLogoutModal(true);
+                window.history.pushState({ page: 'trap' }, "", window.location.href);
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
+
+    useEffect(() => {
+        if (isNotHome && !isNotHomeRef.current) {
+            window.history.pushState({ page: 'subpage' }, "", window.location.href);
+        }
+        isNotHomeRef.current = isNotHome;
+    }, [isNotHome]);
+
 
     useEffect(() => {
         fetchInitialData();
@@ -223,9 +255,10 @@ export default function StudentPanel() {
         }
     };
 
-    const handleLogout = () => {
+    // 🚪 🚀 GÜVENLİ ÇIKIŞ
+    const handleLogoutConfirm = () => {
         localStorage.clear();
-        navigate('/');
+        navigate('/', { replace: true });
     };
 
     const getInitials = (first?: string, last?: string) => {
@@ -259,7 +292,6 @@ export default function StudentPanel() {
     return (
         <div className="min-h-screen bg-slate-50 text-slate-800 flex font-sans selection:bg-indigo-500/30">
 
-            {/* 🧭 SOL NAVİGASYON */}
             <aside className="w-72 bg-white border-r border-slate-200 flex flex-col shadow-sm z-10 shrink-0">
                 <div onClick={() => !isParentViewing && navigate('/campus')} className={`p-8 border-b border-slate-100 ${!isParentViewing ? 'cursor-pointer hover:bg-slate-50 transition-colors group' : ''}`}>
                     <h1 className={`text-3xl font-black text-indigo-600 tracking-tight ${!isParentViewing && 'group-hover:scale-105 transition-transform origin-left'}`}>
@@ -304,7 +336,6 @@ export default function StudentPanel() {
                 </div>
             </aside>
 
-            {/* 📡 ANA İÇERİK EKRANI */}
             <main className="flex-1 flex flex-col h-screen overflow-hidden">
                 <header className="bg-white border-b border-slate-200 px-10 py-6 flex justify-between items-center shrink-0">
                     <div>
@@ -354,10 +385,8 @@ export default function StudentPanel() {
                     </div>
                 </header>
 
-                {/* 🧩 İÇERİK ALANI */}
                 <div className="flex-1 overflow-y-auto p-10 bg-slate-50/50">
 
-                    {/* 📢 DUYURULAR SEKME */}
                     {activeTab === 'announcements' && (
                         <div className="max-w-7xl mx-auto animate-fade-in-down">
                             {selectedAnnouncement ? (
@@ -467,7 +496,6 @@ export default function StudentPanel() {
                         </div>
                     )}
 
-                    {/* ✉️ İLETİŞİM & MESAJLAR SEKME */}
                     {activeTab === 'messages' && (
                         <div className="max-w-7xl mx-auto flex flex-col h-[calc(100vh-150px)] animate-fade-in">
                             <div className="mb-4 flex items-center justify-between">
@@ -481,7 +509,6 @@ export default function StudentPanel() {
                             </div>
 
                             <div className="flex-1 flex gap-6 overflow-hidden">
-                                {/* SOL PANE: LİSTE */}
                                 <div className="w-1/3 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
                                     <div className="flex border-b border-slate-100 bg-slate-50">
                                         <button onClick={() => {setMailBoxView('INBOX'); setRightPaneMode('EMPTY');}} className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${mailBoxView === 'INBOX' ? 'border-indigo-600 text-indigo-700 bg-white' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>Gelen Kutusu</button>
@@ -512,7 +539,6 @@ export default function StudentPanel() {
                                     </div>
                                 </div>
 
-                                {/* SAĞ PANE: OKUMA / YAZMA */}
                                 <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col relative">
                                     {rightPaneMode === 'EMPTY' && (
                                         <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-10 bg-slate-50">
@@ -568,7 +594,6 @@ export default function StudentPanel() {
                                             <form onSubmit={handleSendMessage} className="flex flex-col flex-1 overflow-y-auto pr-2 pb-4">
                                                 <div className="space-y-6">
 
-                                                    {/* 🚀 AKILLI ARAMA ÇUBUĞU (AUTOCOMPLETE) */}
                                                     <div className="relative z-20">
                                                         <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Kime (Alıcı Seçin) *</label>
                                                         {selectedReceiverName ? (
@@ -593,7 +618,6 @@ export default function StudentPanel() {
                                                                     </div>
                                                                 </div>
 
-                                                                {/* DROPDOWN */}
                                                                 <div className="relative">
                                                                     {showSearchDropdown && searchResults.length > 0 && (
                                                                         <div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in-down">
@@ -627,13 +651,13 @@ export default function StudentPanel() {
                                                         />
                                                     </div>
 
-                                                    <div className="flex flex-col relative z-0">
+                                                    <div className="flex flex-col relative z-0 flex-1 min-h-[150px]">
                                                         <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Mesajınız *</label>
                                                         <textarea
                                                             value={msgContent}
                                                             onChange={e => setMsgContent(e.target.value)}
                                                             required
-                                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium focus:bg-white focus:border-indigo-500 outline-none transition-all resize-y min-h-[200px]"
+                                                            className="flex-1 w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium focus:bg-white focus:border-indigo-500 outline-none transition-all resize-y min-h-[150px]"
                                                             placeholder="Mesajınızı detaylıca yazın..."
                                                         />
                                                     </div>
@@ -652,7 +676,6 @@ export default function StudentPanel() {
                         </div>
                     )}
 
-                    {/* 👤 PROFİLİM SEKME (TAM SAYFA) */}
                     {activeTab === 'profile' && (
                         <div className="max-w-4xl mx-auto h-full">
                             {profileViewMode === 'overview' && (
@@ -753,6 +776,7 @@ export default function StudentPanel() {
                                             </h2>
                                         </div>
                                     </div>
+
                                     <form onSubmit={handleProfileUpdate} className="space-y-6 max-w-2xl">
                                         {profileViewMode === 'editPersonal' && (
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -766,18 +790,21 @@ export default function StudentPanel() {
                                                 </div>
                                             </div>
                                         )}
+
                                         {profileViewMode === 'editEmail' && (
                                             <div>
                                                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">Yeni E-Posta Adresi *</label>
                                                 <input type="email" value={updateForm.email} onChange={e => setUpdateForm({...updateForm, email: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all" required />
                                             </div>
                                         )}
+
                                         {profileViewMode === 'editPhone' && (
                                             <div>
                                                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">Yeni Telefon Numarası *</label>
                                                 <input type="text" value={updateForm.phone} onChange={e => setUpdateForm({...updateForm, phone: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all" placeholder="05XX XXX XX XX" required />
                                             </div>
                                         )}
+
                                         {profileViewMode === 'editPassword' && (
                                             <div className="space-y-6">
                                                 <div>
@@ -790,6 +817,7 @@ export default function StudentPanel() {
                                                 </div>
                                             </div>
                                         )}
+
                                         <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-slate-100">
                                             <button type="button" onClick={() => setProfileViewMode('overview')} className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-3 rounded-xl font-bold transition-all">
                                                 İPTAL
@@ -819,7 +847,7 @@ export default function StudentPanel() {
                         </div>
                         <div className="flex justify-center gap-4">
                             <button onClick={() => setShowLogoutModal(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-bold text-sm transition-colors">İPTAL</button>
-                            <button onClick={handleLogout} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold text-sm shadow-md shadow-red-600/20 transition-all">ÇIKIŞ YAP</button>
+                            <button onClick={handleLogoutConfirm} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold text-sm shadow-md shadow-red-600/20 transition-all">ÇIKIŞ YAP</button>
                         </div>
                     </div>
                 </div>

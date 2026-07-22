@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import { showToast } from '../../utils/toast';
@@ -21,13 +21,43 @@ export default function ParentPanel() {
     const [loading, setLoading] = useState(true);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-    // 🚦 GÜNCELLENEN STATE: selection, studentsList, parentProfile
     const [viewMode, setViewMode] = useState<'selection' | 'studentsList' | 'parentProfile'>('selection');
     const [parentProfile, setParentProfile] = useState<ParentProfile | null>(null);
     const [parentProfileView, setParentProfileView] = useState<ProfileViewMode>('overview');
     const [parentUpdateForm, setParentUpdateForm] = useState({
         firstName: '', lastName: '', email: '', phone: '', currentPassword: '', newPassword: ''
     });
+
+    // 🧠 GERİ TUŞU KORUMASI (Akıllı Durum Tahsisi)
+    // Veli panelinde anasayfa 'selection' (Seçim) sekmesidir!
+    const isNotHome = viewMode !== 'selection' || parentProfileView !== 'overview';
+    const isNotHomeRef = useRef(isNotHome);
+
+    useEffect(() => {
+        window.history.replaceState({ page: 'base' }, "", window.location.href);
+        window.history.pushState({ page: 'trap' }, "", window.location.href);
+
+        const handlePopState = () => {
+            if (isNotHomeRef.current) {
+                setViewMode('selection');
+                setParentProfileView('overview');
+            } else {
+                setShowLogoutModal(true);
+                window.history.pushState({ page: 'trap' }, "", window.location.href);
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
+
+    useEffect(() => {
+        if (isNotHome && !isNotHomeRef.current) {
+            window.history.pushState({ page: 'subpage' }, "", window.location.href);
+        }
+        isNotHomeRef.current = isNotHome;
+    }, [isNotHome]);
+
 
     useEffect(() => {
         fetchParentProfile();
@@ -78,7 +108,12 @@ export default function ParentPanel() {
         } catch (err) { showToast('Profil güncellenemedi.', 'error'); }
     };
 
-    const handleLogout = () => { localStorage.clear(); navigate('/'); };
+    // 🚪 🚀 GÜVENLİ ÇIKIŞ
+    const handleLogout = () => {
+        localStorage.clear();
+        navigate('/', { replace: true });
+    };
+
     const getInitials = (first?: string, last?: string) => { return !first || !last ? 'VP' : `${first.charAt(0)}${last.charAt(0)}`.toUpperCase(); };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-950 text-purple-500 font-bold animate-pulse text-xl">Veli Paneli Yükleniyor...</div>;

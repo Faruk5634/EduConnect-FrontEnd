@@ -9,17 +9,14 @@ import AnnouncementTab from "../../components/school-admin/AnnouncementTab.tsx";
 import ProfileTab from '../../components/shared/ProfileTab';
 import ContactTab from '../../components/shared/ContactTab';
 
-
 const AdminPanel: React.FC = () => {
     const navigate = useNavigate();
 
-    // 🚦 Durum Yönetimleri
     const [activeTab, setActiveTab] = useState('overview');
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    // 👤 Gerçek Profil ve Kurum Verileri
     const [profileData, setProfileData] = useState({
         name: 'Yükleniyor...',
         email: '',
@@ -27,7 +24,6 @@ const AdminPanel: React.FC = () => {
         schoolName: 'Kurum Bilgisi Bekleniyor...'
     });
 
-    // 📈 Gerçek İstatistik Verileri
     const [stats, setStats] = useState({
         students: 0,
         teachers: 0,
@@ -36,42 +32,41 @@ const AdminPanel: React.FC = () => {
         announcements: 0
     });
 
-    // 🧠 Geri Tuşu İçin Akıllı Hafıza Çipi (Aktif sekmeyi her an hatırlar)
-    const activeTabRef = useRef(activeTab);
-    useEffect(() => {
-        activeTabRef.current = activeTab;
-    }, [activeTab]);
+    // 🧠 GERİ TUŞU KORUMASI (Akıllı Durum Tahsisi)
+    const isNotHome = activeTab !== 'overview';
+    const isNotHomeRef = useRef(isNotHome);
 
-    // 🛡️ GERİ TUŞU KORUMASI VE AKILLI YÖNLENDİRME (Anti-Sızıntı Motoru)
     useEffect(() => {
-        window.history.pushState(null, "", window.location.pathname);
+        window.history.replaceState({ page: 'base' }, "", window.location.href);
+        window.history.pushState({ page: 'trap' }, "", window.location.href);
+
         const handlePopState = () => {
-            window.history.pushState(null, "", window.location.pathname);
-
-            // Eğer ana sayfada değilsek, önce ana sayfaya dön
-            if (activeTabRef.current !== 'overview') {
+            if (isNotHomeRef.current) {
                 setActiveTab('overview');
             } else {
-                // Zaten ana sayfadaysak çıkış uyarısı ver
                 setShowLogoutModal(true);
+                window.history.pushState({ page: 'trap' }, "", window.location.href);
             }
         };
+
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
     }, []);
 
-    // 📡 Verileri Backend'den Çekme Motoru
+    useEffect(() => {
+        if (isNotHome && !isNotHomeRef.current) {
+            window.history.pushState({ page: 'subpage' }, "", window.location.href);
+        }
+        isNotHomeRef.current = isNotHome;
+    }, [isNotHome]);
+
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                // Authorization header is provided by api interceptor
-
-                // 1. Kullanıcı ve Kurum Bilgilerini Çek
                 try {
                     const userRes = await api.get('/users/me');
                     const user = userRes.data;
 
-                    // Rol ismini akıllıca belirle
                     let roleDisplay = 'Yönetici';
                     const roleStr = String(user.role || '').toUpperCase();
                     if (roleStr.includes('VICE') || roleStr.includes('YARDIMCI')) roleDisplay = 'Müdür Yardımcısı';
@@ -87,7 +82,6 @@ const AdminPanel: React.FC = () => {
                     console.warn("Kullanıcı bilgileri çekilemedi.");
                 }
 
-                // 2. Kuruma Ait İstatistikleri Çek
                 try {
                     const statsRes = await api.get('/school/stats');
                     setStats({
@@ -98,7 +92,6 @@ const AdminPanel: React.FC = () => {
                         announcements: statsRes.data.totalAnnouncements || 0
                     });
                 } catch (err) {
-                    // EĞER SERVER 500 ATARSA, BİZ SESSİZCE 0 GÖSTERELİM VE KONSOLA YAZALIM
                     console.error("İstatistikler henüz hazır değil veya backend hata döndü:", err);
                     setStats({ students: 0, teachers: 0, classes: 0, parents: 0, announcements: 0 });
                 }
@@ -113,20 +106,16 @@ const AdminPanel: React.FC = () => {
         fetchDashboardData();
     }, [activeTab]);
 
-    // 🚪 Güvenli Çıkış Motoru
     const handleLogoutConfirm = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('userRole');
-        navigate('/');
+        localStorage.clear();
+        navigate('/', { replace: true });
     };
 
-    // 🔠 İsim Baş harflerini alma
     const getInitials = (name: string) => {
         if (!name || name === 'Yükleniyor...') return 'U';
         return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
     };
 
-    // 🎨 Sol Menü Butonlarının Renk Motoru
     const getTabClass = (tabName: string) => {
         return `w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all group font-semibold ${
             activeTab === tabName
@@ -138,9 +127,7 @@ const AdminPanel: React.FC = () => {
     return (
         <div className="min-h-screen bg-slate-100 text-slate-800 flex font-sans selection:bg-blue-500/30">
 
-            {/* 🧭 Sol Navigasyon (Sidebar) */}
             <aside className="w-72 bg-white border-r border-slate-200 flex flex-col shadow-sm z-10">
-                {/* 🚀 DEĞİŞİKLİK BURADA: cursor-pointer eklendi ve onClick verildi */}
                 <div
                     className="p-8 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors group"
                     onClick={() => setActiveTab('overview')}
@@ -197,17 +184,14 @@ const AdminPanel: React.FC = () => {
                 </div>
             </aside>
 
-            {/* 📡 Ana İçerik Ekranı */}
             <main className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
 
-                {/* 👤 ÜST BAŞLIK VE PROFİL ALANI */}
                 <header className="bg-white border-b border-slate-200 px-10 py-6 flex justify-between items-center shrink-0">
                     <div>
                         <h2 className="text-2xl font-black text-slate-800 tracking-tight">{profileData.schoolName}</h2>
                         <p className="text-slate-500 font-medium text-sm mt-1">Sayın {profileData.name} - <span className="font-bold text-blue-600">{profileData.roleTitle}</span></p>
                     </div>
 
-                    {/* Sağ Üst Açılır Menü (Dropdown) Z-INDEX DÜZELTİLDİ */}
                     <div className="relative z-30">
                         {isDropdownOpen && <div className="fixed inset-0 z-40 cursor-default" onClick={() => setIsDropdownOpen(false)}></div>}
 
@@ -247,14 +231,11 @@ const AdminPanel: React.FC = () => {
                     </div>
                 </header>
 
-                {/* 🧩 DİNAMİK İÇERİK ALANI */}
                 <div className="flex-1 overflow-y-auto flex flex-col p-10">
 
-                    {/* İçerik */}
                     <div className="flex-1">
                         {activeTab === 'overview' && (
                             <div className="animate-fade-in-down max-w-6xl mx-auto">
-                                {/* İçerik Başlığı */}
                                 <div className="mb-8">
                                     <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
                                         <span>📊</span> Sistem Özeti
@@ -266,7 +247,6 @@ const AdminPanel: React.FC = () => {
                                     <div className="text-center py-10 text-slate-400 font-medium animate-pulse">Veriler yükleniyor...</div>
                                 ) : (
                                     <>
-                                        {/* İstatistik Kartları */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                                             <div onClick={() => setActiveTab('students')} className="cursor-pointer bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-400 transition-all flex flex-col items-center justify-center text-center group">
                                                 <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">🎓</div>
@@ -290,7 +270,6 @@ const AdminPanel: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        {/* Geniş Bilgi Kartı */}
                                         <div onClick={() => setActiveTab('announcements')} className="cursor-pointer bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-blue-400 transition-all flex items-center justify-between group">
                                             <div className="flex items-start gap-4">
                                                 <div className="text-2xl mt-1 group-hover:scale-110 transition-transform">📢</div>
@@ -305,7 +284,6 @@ const AdminPanel: React.FC = () => {
                             </div>
                         )}
 
-                        {/* GELECEKTE EKLENECEK SEKME ALANLARI */}
                         {activeTab === 'students' && <div className="h-full"><StudentManagementTab /></div>}
                         {activeTab === 'parents' && <div className="h-full"><ParentTab /></div>}
                         {activeTab === 'teachers' && <div className="h-full"><TeacherTab /></div>}
@@ -315,14 +293,12 @@ const AdminPanel: React.FC = () => {
                         {activeTab === 'messages' && <div className="h-full"><ContactTab /></div>}
                     </div>
 
-                    {/* 🦶 FOOTER (Alt Bilgi) */}
                     <footer className="mt-12 pt-6 border-t border-slate-200 text-center text-slate-400 text-sm font-medium">
                         © 2026 EduConnect Kurum Yönetim Sistemi. Tüm hakları saklıdır.
                     </footer>
                 </div>
             </main>
 
-            {/* 🚨 ÇIKIŞ ONAY PENCERESİ */}
             {showLogoutModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 border border-slate-200 relative animate-scale-in z-50">
