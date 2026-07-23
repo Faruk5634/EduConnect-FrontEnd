@@ -77,7 +77,6 @@ export default function StudentPanel() {
     });
 
     // 🧠 GERİ TUŞU KORUMASI (Akıllı Durum Tahsisi)
-    // Öğrenci panelinde anasayfa 'announcements' (Duyurular) sekmesidir!
     const isNotHome = activeTab !== 'announcements' || profileViewMode !== 'overview' || rightPaneMode !== 'EMPTY' || selectedAnnouncement !== null;
     const isNotHomeRef = useRef(isNotHome);
 
@@ -226,9 +225,7 @@ export default function StudentPanel() {
     const handleProfileUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (isParentViewing) {
-            showToast('Öğrenci bilgileri veli yetkisiyle güncellendi.', 'success');
-            setProfileViewMode('overview');
-            setUpdateForm(prev => ({ ...prev, newPassword: '', currentPassword: '' }));
+            showToast('Öğrenci bilgileri veli yetkisiyle güncellenemez.', 'error');
             return;
         }
 
@@ -523,7 +520,11 @@ export default function StudentPanel() {
                                         ) : (
                                             <div className="divide-y divide-slate-100">
                                                 {displayedMessages.map(msg => (
-                                                    <div key={msg.id} onClick={() => handleReadMessage(msg)} className={`p-4 cursor-pointer hover:bg-slate-50 transition-colors flex flex-col gap-1 border-l-4 ${selectedMessage?.id === msg.id ? 'border-l-indigo-500 bg-indigo-50/30' : !msg.isRead && msg.type === 'INBOX' ? 'border-l-indigo-500 bg-slate-50' : 'border-l-transparent'}`}>
+                                                    <div
+                                                        key={msg.id}
+                                                        onClick={() => handleReadMessage(msg)}
+                                                        className={`p-4 cursor-pointer hover:bg-slate-50 transition-colors flex flex-col gap-1 border-l-4 ${selectedMessage?.id === msg.id ? 'border-l-indigo-500 bg-indigo-50/30' : !msg.isRead && msg.type === 'INBOX' ? 'border-l-indigo-500 bg-slate-50' : 'border-l-transparent'}`}
+                                                    >
                                                         <div className="flex justify-between items-baseline">
                                                             <p className={`text-sm truncate flex items-center ${!msg.isRead && msg.type === 'INBOX' ? 'font-black text-slate-900' : 'font-bold text-slate-700'}`}>
                                                                 {msg.type === 'INBOX' ? msg.sender : `Alıcı: ${msg.sender}`}
@@ -540,6 +541,7 @@ export default function StudentPanel() {
                                 </div>
 
                                 <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col relative">
+
                                     {rightPaneMode === 'EMPTY' && (
                                         <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-10 bg-slate-50">
                                             <div className="w-24 h-24 bg-slate-200 rounded-full flex items-center justify-center text-4xl mb-6 text-slate-400">✉️</div>
@@ -551,19 +553,21 @@ export default function StudentPanel() {
                                         <div className="absolute inset-0 flex flex-col animate-fade-in bg-white">
                                             <div className="p-8 border-b border-slate-100 bg-slate-50 shrink-0">
                                                 <h2 className="text-2xl font-black text-slate-800 mb-4">{selectedMessage.subject}</h2>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-lg font-black">
-                                                        {selectedMessage.sender.charAt(0)}
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm font-bold text-slate-800">{mailBoxView === 'INBOX' ? 'Kimden:' : 'Kime:'} <span className="text-indigo-700">{selectedMessage.sender}</span></p>
-                                                        <p className="text-[11px] font-bold text-slate-400 mt-0.5">{selectedMessage.date} - {selectedMessage.time}</p>
+                                                <div className="flex justify-between items-center">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg font-black">
+                                                            {selectedMessage.sender.charAt(0)}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-bold text-slate-800">{mailBoxView === 'INBOX' ? 'Kimden:' : 'Kime:'} <span className="text-emerald-700">{selectedMessage.sender}</span></p>
+                                                            <p className="text-[11px] font-bold text-slate-400 mt-0.5">{selectedMessage.date} - {selectedMessage.time}</p>
 
-                                                        {selectedMessage.isSentByParent && (
-                                                            <span className="inline-block mt-2 bg-purple-100 text-purple-700 border border-purple-200 px-3 py-1 rounded-md text-[10px] font-black tracking-widest uppercase shadow-sm">
-                                                                🛡️ VELİ TARAFINDAN GÖNDERİLDİ
-                                                            </span>
-                                                        )}
+                                                            {selectedMessage.isSentByParent && (
+                                                                <span className="inline-block mt-2 bg-purple-100 text-purple-700 border border-purple-200 px-3 py-1 rounded-md text-[10px] font-black tracking-widest uppercase shadow-sm">
+                                                                    🛡️ VELİ TARAFINDAN GÖNDERİLDİ
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -579,7 +583,7 @@ export default function StudentPanel() {
                                                         setSelectedReceiverName(selectedMessage.sender);
                                                         setMsgSubject(`RE: ${selectedMessage.subject}`);
                                                         setRightPaneMode('COMPOSE');
-                                                    }} className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2">
+                                                    }} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2">
                                                         <span>↩️</span> Yanıtla
                                                     </button>
                                                 </div>
@@ -591,15 +595,15 @@ export default function StudentPanel() {
                                         <div className="absolute inset-0 flex flex-col p-8 animate-fade-in bg-white">
                                             <h3 className="text-xl font-black text-slate-800 mb-6 shrink-0">Yeni İleti Gönder</h3>
 
-                                            <form onSubmit={handleSendMessage} className="flex flex-col flex-1 overflow-y-auto pr-2 pb-4">
+                                            <form onSubmit={handleSendMessage} className="flex flex-col flex-1 overflow-y-auto pr-2 pb-2">
                                                 <div className="space-y-6">
 
                                                     <div className="relative z-20">
                                                         <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Kime (Alıcı Seçin) *</label>
                                                         {selectedReceiverName ? (
-                                                            <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3 shadow-sm">
-                                                                <span className="font-bold text-indigo-800">{selectedReceiverName}</span>
-                                                                <button type="button" onClick={() => {setMsgReceiverId(''); setSelectedReceiverName('');}} className="text-indigo-500 hover:text-red-500 font-bold transition-colors text-sm px-2">
+                                                            <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 shadow-sm">
+                                                                <span className="font-bold text-blue-800">{selectedReceiverName}</span>
+                                                                <button type="button" onClick={() => {setMsgReceiverId(''); setSelectedReceiverName('');}} className="text-blue-500 hover:text-red-500 font-bold transition-colors text-sm px-2">
                                                                     ✕ Değiştir
                                                                 </button>
                                                             </div>
@@ -610,7 +614,7 @@ export default function StudentPanel() {
                                                                         type="text"
                                                                         value={userSearchQuery}
                                                                         onChange={e => setUserSearchQuery(e.target.value)}
-                                                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 pr-12 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all shadow-inner"
+                                                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 pr-12 text-sm font-bold focus:bg-white focus:border-blue-500 outline-none transition-all shadow-inner"
                                                                         placeholder="Kişi aramak için isim veya kullanıcı adı yazın (En az 2 harf)..."
                                                                     />
                                                                     <div className="absolute right-4 text-slate-400 pointer-events-none flex items-center justify-center">
@@ -622,9 +626,9 @@ export default function StudentPanel() {
                                                                     {showSearchDropdown && searchResults.length > 0 && (
                                                                         <div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in-down">
                                                                             {searchResults.map((user: any) => (
-                                                                                <div key={user.userId} onClick={() => handleSelectUser(user)} className="px-5 py-3 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between transition-colors">
+                                                                                <div key={user.userId} onClick={() => handleSelectUser(user)} className="px-5 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between transition-colors">
                                                                                     <p className="text-sm font-bold text-slate-800">{user.fullName}</p>
-                                                                                    <p className="text-[10px] font-black text-indigo-600 bg-indigo-100 px-2 py-1 rounded uppercase tracking-widest">{user.role}</p>
+                                                                                    <p className="text-[10px] font-black text-blue-600 bg-blue-100 px-2 py-1 rounded uppercase tracking-widest">{user.role}</p>
                                                                                 </div>
                                                                             ))}
                                                                         </div>
@@ -646,25 +650,24 @@ export default function StudentPanel() {
                                                             value={msgSubject}
                                                             onChange={e => setMsgSubject(e.target.value)}
                                                             required
-                                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all"
+                                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-bold focus:bg-white focus:border-blue-500 outline-none transition-all"
                                                             placeholder="Mesajınızın konusu..."
                                                         />
                                                     </div>
-
                                                     <div className="flex flex-col relative z-0 flex-1 min-h-[150px]">
                                                         <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Mesajınız *</label>
                                                         <textarea
                                                             value={msgContent}
                                                             onChange={e => setMsgContent(e.target.value)}
                                                             required
-                                                            className="flex-1 w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium focus:bg-white focus:border-indigo-500 outline-none transition-all resize-y min-h-[150px]"
+                                                            className="flex-1 w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium focus:bg-white focus:border-blue-500 outline-none transition-all resize-y min-h-[150px]"
                                                             placeholder="Mesajınızı detaylıca yazın..."
                                                         />
                                                     </div>
                                                 </div>
 
                                                 <div className="pt-8 pb-4 shrink-0 flex justify-end mt-auto">
-                                                    <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-3 rounded-lg font-bold transition-all shadow-md">
+                                                    <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-3 rounded-lg font-bold transition-all shadow-md">
                                                         GÖNDER
                                                     </button>
                                                 </div>
@@ -678,6 +681,7 @@ export default function StudentPanel() {
 
                     {activeTab === 'profile' && (
                         <div className="max-w-4xl mx-auto h-full">
+
                             {profileViewMode === 'overview' && (
                                 <div className="animate-fade-in-down pb-10">
                                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
@@ -727,41 +731,56 @@ export default function StudentPanel() {
                                         </div>
                                     </div>
 
-                                    <h3 className="text-xl font-black text-slate-800 mb-4">Hesap İşlemleri {isParentViewing && <span className="text-sm font-medium text-purple-600">(Veli Yetkisi)</span>}</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div onClick={() => setProfileViewMode('editPersonal')} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex items-center gap-4 group">
-                                            <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">👤</div>
+                                    {/* 🚀 DEĞİŞİKLİK BURADA: VELİYE DÜZENLEME BUTONLARI GÖSTERİLMEZ, BİLGİ KARTI GÖSTERİLİR */}
+                                    {!isParentViewing ? (
+                                        <>
+                                            <h3 className="text-xl font-black text-slate-800 mb-4">Hesap İşlemleri</h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div onClick={() => setProfileViewMode('editPersonal')} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex items-center gap-4 group">
+                                                    <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">👤</div>
+                                                    <div>
+                                                        <h4 className="font-bold text-slate-800">Kişisel Bilgileri Güncelle</h4>
+                                                        <p className="text-xs text-slate-500 mt-1">Sistemdeki ad ve soyadınızı değiştirin.</p>
+                                                    </div>
+                                                </div>
+                                                <div onClick={() => setProfileViewMode('editEmail')} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex items-center gap-4 group">
+                                                    <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">✉️</div>
+                                                    <div>
+                                                        <h4 className="font-bold text-slate-800">E-Posta Değiştir</h4>
+                                                        <p className="text-xs text-slate-500 mt-1">Sistem ve iletişim e-postanızı yenileyin.</p>
+                                                    </div>
+                                                </div>
+                                                <div onClick={() => setProfileViewMode('editPhone')} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex items-center gap-4 group">
+                                                    <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">📱</div>
+                                                    <div>
+                                                        <h4 className="font-bold text-slate-800">Telefon Numarası Değiştir</h4>
+                                                        <p className="text-xs text-slate-500 mt-1">İletişim numaranızı güncelleyin.</p>
+                                                    </div>
+                                                </div>
+                                                <div onClick={() => setProfileViewMode('editPassword')} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex items-center gap-4 group">
+                                                    <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">🔒</div>
+                                                    <div>
+                                                        <h4 className="font-bold text-slate-800">Şifre Değiştir</h4>
+                                                        <p className="text-xs text-slate-500 mt-1">Hesap güvenliğiniz için şifrenizi yenileyin.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="mt-8 bg-purple-50 border border-purple-200 rounded-2xl p-6 flex items-start gap-4 shadow-sm animate-fade-in">
+                                            <div className="text-3xl mt-1">🛡️</div>
                                             <div>
-                                                <h4 className="font-bold text-slate-800">Kişisel Bilgileri Güncelle</h4>
-                                                <p className="text-xs text-slate-500 mt-1">Sistemdeki ad ve soyadınızı değiştirin.</p>
+                                                <h4 className="font-black text-purple-900 text-lg">Salt Okunur Mod (Veli Yetkisi)</h4>
+                                                <p className="text-sm font-medium text-purple-700 mt-1.5 leading-relaxed">
+                                                    Öğrenci hesap ayarları (şifre, iletişim bilgileri vb.) yalnızca öğrencinin kendi paneli üzerinden güncellenebilir. Veli olarak bu bilgileri sadece görüntüleme yetkisine sahipsiniz.
+                                                </p>
                                             </div>
                                         </div>
-                                        <div onClick={() => setProfileViewMode('editEmail')} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex items-center gap-4 group">
-                                            <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">✉️</div>
-                                            <div>
-                                                <h4 className="font-bold text-slate-800">E-Posta Değiştir</h4>
-                                                <p className="text-xs text-slate-500 mt-1">Sistem ve iletişim e-postanızı yenileyin.</p>
-                                            </div>
-                                        </div>
-                                        <div onClick={() => setProfileViewMode('editPhone')} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex items-center gap-4 group">
-                                            <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">📱</div>
-                                            <div>
-                                                <h4 className="font-bold text-slate-800">Telefon Numarası Değiştir</h4>
-                                                <p className="text-xs text-slate-500 mt-1">İletişim numaranızı güncelleyin.</p>
-                                            </div>
-                                        </div>
-                                        <div onClick={() => setProfileViewMode('editPassword')} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex items-center gap-4 group">
-                                            <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">🔒</div>
-                                            <div>
-                                                <h4 className="font-bold text-slate-800">Şifre Değiştir</h4>
-                                                <p className="text-xs text-slate-500 mt-1">Hesap güvenliğiniz için şifrenizi yenileyin.</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
                             )}
 
-                            {profileViewMode !== 'overview' && (
+                            {profileViewMode !== 'overview' && !isParentViewing && (
                                 <div className="animate-fade-in-right bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-slate-200">
                                     <div className="flex items-center gap-4 mb-8 pb-4 border-b border-slate-100">
                                         <button onClick={() => setProfileViewMode('overview')} className="text-slate-500 hover:text-slate-900 bg-slate-50 border border-slate-200 p-2 rounded-lg transition-all shadow-sm font-bold px-4">
@@ -836,18 +855,16 @@ export default function StudentPanel() {
 
             {/* 🚨 ÇIKIŞ ONAY PENCERESİ */}
             {showLogoutModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 border border-slate-200 relative animate-scale-in z-50">
-                        <div className="flex flex-col items-center text-center mb-8">
-                            <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
-                                <span className="text-3xl">🚪</span>
-                            </div>
-                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">Sistemden Çıkış</h3>
-                            <p className="text-slate-500 font-medium text-sm mt-2 leading-relaxed">Güvenli bir şekilde oturumunuzu sonlandırmak istediğinize emin misiniz?</p>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 border border-slate-200 relative animate-scale-in z-50 text-center">
+                        <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-6">
+                            <span className="text-4xl">🚪</span>
                         </div>
+                        <h3 className="text-3xl font-black text-slate-800 tracking-tight">Sistemden Çıkış</h3>
+                        <p className="text-slate-500 font-medium text-sm mt-3 mb-8 leading-relaxed">Güvenli bir şekilde oturumunuzu sonlandırmak istediğinize emin misiniz?</p>
                         <div className="flex justify-center gap-4">
-                            <button onClick={() => setShowLogoutModal(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-bold text-sm transition-colors">İPTAL</button>
-                            <button onClick={handleLogoutConfirm} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold text-sm shadow-md shadow-red-600/20 transition-all">ÇIKIŞ YAP</button>
+                            <button onClick={() => setShowLogoutModal(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-4 rounded-xl font-bold text-sm transition-colors uppercase tracking-wider">İPTAL</button>
+                            <button onClick={handleLogoutConfirm} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl font-bold text-sm shadow-md transition-all uppercase tracking-wider">ÇIKIŞ YAP</button>
                         </div>
                     </div>
                 </div>
