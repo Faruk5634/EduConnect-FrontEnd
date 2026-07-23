@@ -442,15 +442,26 @@ export default function TeacherPanel() {
                             </div>
                         </button>
 
+                        {/* 🚀 GÜNCELLEME: PROFİL AÇILIR MENÜSÜ */}
                         {isDropdownOpen && (
-                            <div className="absolute right-0 mt-3 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                            <div className="absolute right-0 mt-3 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in-down origin-top-right">
                                 <div className="p-4 bg-slate-50 border-b border-slate-100">
                                     <p className="text-sm font-bold text-slate-800">{profile?.firstName} {profile?.lastName}</p>
                                     <p className="text-xs text-slate-500 font-medium truncate">{profile?.email || 'E-Posta Belirtilmemiş'}</p>
                                 </div>
-                                <button onClick={() => { setIsDropdownOpen(false); setShowLogoutModal(true); }} className="w-full text-left px-5 py-3 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-3">
-                                    <span>🚪</span> Sistemden Çıkış
-                                </button>
+                                <div className="py-2">
+                                    <button onClick={() => { setIsDropdownOpen(false); setActiveTab('profile'); setProfileViewMode('overview'); }} className="w-full text-left px-5 py-2.5 text-sm font-medium text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-3">
+                                        <span className="text-lg">👤</span> Profilimi Görüntüle
+                                    </button>
+                                    <button onClick={() => { setIsDropdownOpen(false); setActiveTab('messages'); setRightPaneMode('EMPTY'); }} className="w-full text-left px-5 py-2.5 text-sm font-medium text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-3">
+                                        <span className="text-lg">✉️</span> İletişim & Mesajlar
+                                    </button>
+                                </div>
+                                <div className="py-2 border-t border-slate-100">
+                                    <button onClick={() => { setIsDropdownOpen(false); setShowLogoutModal(true); }} className="w-full text-left px-5 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3">
+                                        <span className="text-lg">🚪</span> Sistemden Çıkış
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -607,12 +618,19 @@ export default function TeacherPanel() {
 
                     {activeTab === 'my-announcements' && (
                         <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8 animate-fade-in-down">
-                            <div className="flex items-center gap-3 mb-8 pb-4 border-b border-slate-100">
-                                <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-2xl">🗂️</div>
-                                <div>
-                                    <h2 className="text-2xl font-black text-slate-800">Geçmiş Duyurularım</h2>
-                                    <p className="text-sm text-slate-500 font-medium">Daha önce yayınladığınız duyuruları görüntüleyin veya yayından kaldırın.</p>
+
+                            {/* 🚀 GÜNCELLEME: ÜST KISMA YENİ DUYURU BUTONU EKLENDİ */}
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 pb-4 border-b border-slate-100">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-2xl">🗂️</div>
+                                    <div>
+                                        <h2 className="text-2xl font-black text-slate-800">Geçmiş Duyurularım</h2>
+                                        <p className="text-sm text-slate-500 font-medium">Daha önce yayınladığınız duyuruları görüntüleyin veya yayından kaldırın.</p>
+                                    </div>
                                 </div>
+                                <button onClick={() => setActiveTab('announcements')} className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-sm flex items-center gap-2 shrink-0">
+                                    <span>➕</span> YENİ DUYURU OLUŞTUR
+                                </button>
                             </div>
 
                             <div className="space-y-4">
@@ -620,7 +638,7 @@ export default function TeacherPanel() {
                                     <div className="text-center py-16 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
                                         <span className="text-5xl mb-4 block opacity-50">📭</span>
                                         <h4 className="text-lg font-bold text-slate-700">Henüz bir duyuru yayınlamadınız.</h4>
-                                        <p className="text-sm text-slate-500 mt-2">Öğrencilerinize ulaşmak için sol menüden 'Yeni Duyuru' sekmesini kullanın.</p>
+                                        <p className="text-sm text-slate-500 mt-2">Öğrencilerinize ulaşmak için 'Yeni Duyuru Oluştur' butonunu kullanın.</p>
                                     </div>
                                 ) : (
                                     myAnnouncements.map(ann => {
@@ -637,7 +655,6 @@ export default function TeacherPanel() {
                                                     <h4 className="text-xl font-black text-slate-800 mb-2">{ann.title}</h4>
                                                     <p className="text-sm text-slate-600 line-clamp-2">{ann.content}</p>
 
-                                                    {/* Hedef Sınıflar */}
                                                     <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-2">
                                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">HEDEF:</span>
                                                         <span className="text-xs font-bold text-emerald-600 truncate max-w-[250px]" title={!isGeneral ? ann.targetClasses.join(', ') : 'TÜM OKUL'}>
@@ -645,7 +662,6 @@ export default function TeacherPanel() {
                                                         </span>
                                                     </div>
 
-                                                    {/* Ekli Dosyalar */}
                                                     {ann.attachedFiles && ann.attachedFiles.length > 0 && (
                                                         <div className="mt-3 flex flex-wrap gap-2">
                                                             {ann.attachedFiles.map((file, idx) => (
@@ -793,12 +809,10 @@ export default function TeacherPanel() {
                                                                         type="text"
                                                                         value={userSearchQuery}
                                                                         onChange={e => setUserSearchQuery(e.target.value)}
-                                                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 pr-12 text-sm font-bold focus:bg-white focus:border-blue-500 outline-none transition-all shadow-inner"
+                                                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 pr-10 text-sm font-bold focus:bg-white focus:border-blue-500 outline-none transition-all shadow-inner"
                                                                         placeholder="Kişi aramak için isim veya kullanıcı adı yazın (En az 2 harf)..."
                                                                     />
-                                                                    <div className="absolute right-4 text-slate-400 pointer-events-none flex items-center justify-center">
-                                                                        🔍
-                                                                    </div>
+                                                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
                                                                 </div>
 
                                                                 <div className="flex gap-2 mt-3">
@@ -848,7 +862,7 @@ export default function TeacherPanel() {
                                                             value={msgContent}
                                                             onChange={e => setMsgContent(e.target.value)}
                                                             required
-                                                            className="flex-1 w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium focus:bg-white focus:border-blue-500 outline-none transition-all resize-y min-h-[150px]"
+                                                            className="flex-1 w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium focus:bg-white focus:border-blue-500 outline-none transition-all resize-none min-h-[150px]"
                                                             placeholder="Mesajınızı detaylıca yazın..."
                                                         />
                                                     </div>
