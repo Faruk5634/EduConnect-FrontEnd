@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../../services/api';
+import { api, API_BASE } from '../../services/api';
 import { showToast } from '../../utils/toast';
 
 interface ClassroomInfo {
@@ -17,6 +17,22 @@ interface TeacherProfile {
     phone: string;
     email: string;
     homeroomClasses: ClassroomInfo[];
+}
+
+interface AnnouncementFile {
+    fileName: string;
+    fileUrl: string;
+}
+
+interface Announcement {
+    id: number;
+    title: string;
+    content: string;
+    createdDate: string;
+    authorName: string;
+    type: string;
+    targetClasses: string[];
+    attachedFiles?: AnnouncementFile[];
 }
 
 interface Message {
@@ -43,11 +59,13 @@ export default function TeacherPanel() {
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+    // 🚀 DUYURU DURUMLARI
+    const [myAnnouncements, setMyAnnouncements] = useState<Announcement[]>([]);
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [type, setType] = useState('GENERAL');
     const [selectedClassIds, setSelectedClassIds] = useState<number[]>([]);
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [messages, setMessages] = useState<Message[]>([]);
@@ -68,7 +86,6 @@ export default function TeacherPanel() {
         firstName: '', lastName: '', email: '', phone: '', currentPassword: '', newPassword: ''
     });
 
-    // 🧠 GERİ TUŞU KORUMASI (Akıllı Durum Tahsisi)
     const isNotHome = activeTab !== 'overview' || profileViewMode !== 'overview' || rightPaneMode !== 'EMPTY';
     const isNotHomeRef = useRef(isNotHome);
 
@@ -97,7 +114,6 @@ export default function TeacherPanel() {
         }
         isNotHomeRef.current = isNotHome;
     }, [isNotHome]);
-
 
     useEffect(() => {
         fetchInitialData();
@@ -138,12 +154,24 @@ export default function TeacherPanel() {
             const classRes = await api.get('/classrooms/school');
             setAllClassrooms(classRes.data);
 
+            await fetchMyAnnouncements(`${profileRes.data.firstName} ${profileRes.data.lastName}`);
             await fetchMessages();
         } catch (err) {
             console.error("Veriler çekilemedi:", err);
             showToast("Bilgiler yüklenirken hata oluştu.", "error");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchMyAnnouncements = async (teacherFullName: string) => {
+        try {
+            const res = await api.get('/announcements');
+            const mine = res.data.filter((a: Announcement) => a.authorName === teacherFullName);
+            const sorted = mine.sort((a: Announcement, b: Announcement) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime());
+            setMyAnnouncements(sorted);
+        } catch (error) {
+            console.error("Geçmiş duyurular çekilemedi:", error);
         }
     };
 
@@ -164,6 +192,39 @@ export default function TeacherPanel() {
         );
     };
 
+    const handleSelectAllClasses = () => {
+        if (selectedClassIds.length === allClassrooms.length) {
+            setSelectedClassIds([]);
+        } else {
+            setSelectedClassIds(allClassrooms.map(c => c.id));
+        }
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const newFiles = Array.from(e.target.files);
+
+            if (selectedFiles.length + newFiles.length > 5) {
+                showToast('En fazla 5 adet dosya yükleyebilirsiniz!', 'error');
+                return;
+            }
+
+            const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+            const oversizedFile = newFiles.find(file => file.size > MAX_SIZE);
+            if (oversizedFile) {
+                showToast(`"${oversizedFile.name}" adlı dosya 5 MB'dan büyük! Lütfen daha küçük dosyalar seçin.`, 'error');
+                return;
+            }
+
+            setSelectedFiles(prev => [...prev, ...newFiles]);
+        }
+        e.target.value = '';
+    };
+
+    const removeSelectedFile = (indexToRemove: number) => {
+        setSelectedFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+    };
+
     const handleMakeAnnouncement = async (e: React.FormEvent) => {
         e.preventDefault();
         if (selectedClassIds.length === 0) {
@@ -178,7 +239,10 @@ export default function TeacherPanel() {
             formData.append('content', content);
             formData.append('type', type);
             selectedClassIds.forEach(id => formData.append('classroomIds', id.toString()));
-            if (selectedFile) formData.append('file', selectedFile);
+
+            selectedFiles.forEach(file => {
+                formData.append('files', file);
+            });
 
             await api.post('/announcements/create', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
@@ -188,14 +252,29 @@ export default function TeacherPanel() {
             setTitle('');
             setContent('');
             setSelectedClassIds([]);
-            setSelectedFile(null);
-            const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-            if (fileInput) fileInput.value = '';
+            setSelectedFiles([]);
+
+            if (profile) fetchMyAnnouncements(`${profile.firstName} ${profile.lastName}`);
+
+            // 🚀 Yayınladıktan sonra direkt Duyurularım sekmesine at
+            setActiveTab('my-announcements');
 
         } catch (error) {
             showToast('Duyuru gönderilirken hata oluştu!', 'error');
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteAnnouncement = async (id: number) => {
+        if (!window.confirm("Bu duyuruyu yayından kaldırmak istediğinize emin misiniz?")) return;
+        try {
+            await api.delete(`/announcements/${id}`);
+            showToast('Duyuru başarıyla silindi.', 'success');
+            if (profile) fetchMyAnnouncements(`${profile.firstName} ${profile.lastName}`);
+        } catch (error) {
+            console.error(error);
+            showToast("Duyuru silinirken hata oluştu!", 'error');
         }
     };
 
@@ -287,6 +366,15 @@ export default function TeacherPanel() {
         return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
     };
 
+    const getTypeBadge = (type: string) => {
+        switch (type) {
+            case 'HOMEWORK': return <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-md text-[10px] font-black tracking-widest uppercase border border-purple-200">📝 ÖDEV</span>;
+            case 'EXAM_INFO': return <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-md text-[10px] font-black tracking-widest uppercase border border-amber-200">🎯 SINAV</span>;
+            case 'EVENT': return <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-[10px] font-black tracking-widest uppercase border border-blue-200">🎉 ETKİNLİK</span>;
+            default: return <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md text-[10px] font-black tracking-widest uppercase border border-emerald-200">📢 GENEL</span>;
+        }
+    };
+
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-emerald-600 font-bold animate-pulse text-xl">Öğretmen Paneli Yükleniyor...</div>;
 
     const displayedMessages = messages.filter(m => m.type === mailBoxView);
@@ -311,7 +399,10 @@ export default function TeacherPanel() {
                         <span className="text-xl">🏠</span><span>Anasayfa</span>
                     </button>
                     <button onClick={() => {setActiveTab('announcements'); setProfileViewMode('overview');}} className={`w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all font-semibold ${activeTab === 'announcements' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-emerald-700'}`}>
-                        <span className="text-xl">📢</span><span>Duyuru Paneli</span>
+                        <span className="text-xl">📢</span><span>Yeni Duyuru</span>
+                    </button>
+                    <button onClick={() => {setActiveTab('my-announcements'); setProfileViewMode('overview');}} className={`w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all font-semibold ${activeTab === 'my-announcements' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-emerald-700'}`}>
+                        <span className="text-xl">🗂️</span><span>Duyurularım</span>
                     </button>
                     <button onClick={() => {setActiveTab('messages'); setRightPaneMode('EMPTY'); setProfileViewMode('overview');}} className={`w-full flex items-center justify-between px-5 py-3.5 rounded-xl transition-all font-semibold ${activeTab === 'messages' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-emerald-700'}`}>
                         <div className="flex items-center space-x-4">
@@ -409,17 +500,30 @@ export default function TeacherPanel() {
                             <div className="flex items-center gap-3 mb-8 pb-4 border-b border-slate-100">
                                 <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-2xl">📢</div>
                                 <div>
-                                    <h2 className="text-2xl font-black text-slate-800">Çoklu Sınıf Duyuru Sistemi</h2>
-                                    <p className="text-sm text-slate-500 font-medium">İstediğiniz sınıfları seçin ve duyurunuzu anında fırlatın.</p>
+                                    <h2 className="text-2xl font-black text-slate-800">Yeni Duyuru Yayınla</h2>
+                                    <p className="text-sm text-slate-500 font-medium">Tüm okula veya belirli bir sınıfa duyuru fırlatın.</p>
                                 </div>
                             </div>
 
                             <form onSubmit={handleMakeAnnouncement} className="space-y-8">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-widest mb-3 flex justify-between items-center">
-                                        <span>Hedef Sınıfları Seçiniz *</span>
-                                        <span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-[10px]">{selectedClassIds.length} Sınıf Seçildi</span>
-                                    </label>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <label className="flex items-center gap-2 text-xs font-bold text-slate-600 uppercase tracking-widest">
+                                            <span>Hedef Sınıfları Seçiniz *</span>
+                                            <span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-[10px]">{selectedClassIds.length} Sınıf Seçildi</span>
+                                        </label>
+
+                                        {allClassrooms.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={handleSelectAllClasses}
+                                                className="text-[10px] font-bold bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700 px-3 py-1.5 rounded-md transition-colors border border-slate-200 hover:border-emerald-200"
+                                            >
+                                                {selectedClassIds.length === allClassrooms.length ? 'Tüm Seçimleri Kaldır' : '+ Tüm Sınıfları Seç'}
+                                            </button>
+                                        )}
+                                    </div>
+
                                     <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-200 rounded-xl max-h-48 overflow-y-auto">
                                         {allClassrooms.map(c => {
                                             const isSelected = selectedClassIds.includes(c.id);
@@ -461,17 +565,110 @@ export default function TeacherPanel() {
                                     <textarea rows={5} value={content} onChange={(e) => setContent(e.target.value)} placeholder="Öğrencilerinize iletmek istediğiniz notlar..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-medium focus:bg-white focus:border-emerald-500 outline-none transition-all resize-y placeholder:text-slate-400" required />
                                 </div>
 
-                                <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:bg-emerald-50 hover:border-emerald-300 transition-colors relative group">
-                                    <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">📎</div>
-                                    <label className="block text-base font-black text-slate-700 mb-1 cursor-pointer">Destekleyici Dosya Ekle (İsteğe Bağlı)</label>
-                                    <p className="text-xs text-slate-500 font-medium mb-4">PDF, Word, Excel veya Resim Seçiniz</p>
-                                    <input id="file-upload" type="file" onChange={e => setSelectedFile(e.target.files ? e.target.files[0] : null)} className="text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-6 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200 cursor-pointer transition-colors" />
+                                <div>
+                                    <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:bg-emerald-50 hover:border-emerald-300 transition-colors relative group">
+                                        <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">📎</div>
+                                        <label className="block text-base font-black text-slate-700 mb-1 cursor-pointer">
+                                            Destekleyici Dosya Ekle (İsteğe Bağlı)
+                                        </label>
+                                        <p className="text-xs text-slate-500 font-medium mb-4">Maksimum 5 Dosya (PDF, Word, Excel, Resim). Dosya başı maksimum 5 MB.</p>
+                                        <input
+                                            id="file-upload"
+                                            type="file"
+                                            multiple
+                                            onChange={handleFileChange}
+                                            className="text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-6 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200 cursor-pointer transition-colors"
+                                        />
+                                    </div>
+
+                                    {selectedFiles.length > 0 && (
+                                        <div className="mt-4 bg-white border border-slate-200 rounded-xl p-4">
+                                            <h4 className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-3 border-b border-slate-100 pb-2">Eklenen Dosyalar ({selectedFiles.length}/5)</h4>
+                                            <ul className="space-y-2">
+                                                {selectedFiles.map((file, index) => (
+                                                    <li key={index} className="flex items-center justify-between bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
+                                                        <span className="text-sm font-medium text-slate-700 truncate max-w-[80%]">{file.name}</span>
+                                                        <button type="button" onClick={() => removeSelectedFile(index)} className="text-red-500 hover:bg-red-100 p-1.5 rounded-md transition-colors" title="Dosyayı Sil">
+                                                            ✕
+                                                        </button>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <button type="submit" disabled={isSubmitting} className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white font-black py-4 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-lg">
                                     {isSubmitting ? 'GÖNDERİLİYOR...' : 'SEÇİLİ SINIFLARA YAYINLA 🚀'}
                                 </button>
                             </form>
+                        </div>
+                    )}
+
+                    {activeTab === 'my-announcements' && (
+                        <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8 animate-fade-in-down">
+                            <div className="flex items-center gap-3 mb-8 pb-4 border-b border-slate-100">
+                                <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-2xl">🗂️</div>
+                                <div>
+                                    <h2 className="text-2xl font-black text-slate-800">Geçmiş Duyurularım</h2>
+                                    <p className="text-sm text-slate-500 font-medium">Daha önce yayınladığınız duyuruları görüntüleyin veya yayından kaldırın.</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                {myAnnouncements.length === 0 ? (
+                                    <div className="text-center py-16 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+                                        <span className="text-5xl mb-4 block opacity-50">📭</span>
+                                        <h4 className="text-lg font-bold text-slate-700">Henüz bir duyuru yayınlamadınız.</h4>
+                                        <p className="text-sm text-slate-500 mt-2">Öğrencilerinize ulaşmak için sol menüden 'Yeni Duyuru' sekmesini kullanın.</p>
+                                    </div>
+                                ) : (
+                                    myAnnouncements.map(ann => {
+                                        const isGeneral = !ann.targetClasses || ann.targetClasses.length === 0 || ann.targetClasses.includes("Genel Duyuru");
+                                        return (
+                                            <div key={ann.id} className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex flex-col md:flex-row justify-between gap-6 hover:border-emerald-300 transition-colors group">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-3 mb-3">
+                                                        {getTypeBadge(ann.type)}
+                                                        <span className="text-xs font-bold text-slate-400">
+                                                            {new Date(ann.createdDate).toLocaleDateString('tr-TR')} • {new Date(ann.createdDate).toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})}
+                                                        </span>
+                                                    </div>
+                                                    <h4 className="text-xl font-black text-slate-800 mb-2">{ann.title}</h4>
+                                                    <p className="text-sm text-slate-600 line-clamp-2">{ann.content}</p>
+
+                                                    {/* Hedef Sınıflar */}
+                                                    <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-2">
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">HEDEF:</span>
+                                                        <span className="text-xs font-bold text-emerald-600 truncate max-w-[250px]" title={!isGeneral ? ann.targetClasses.join(', ') : 'TÜM OKUL'}>
+                                                            {!isGeneral ? ann.targetClasses.join(', ') : 'TÜM OKUL'}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Ekli Dosyalar */}
+                                                    {ann.attachedFiles && ann.attachedFiles.length > 0 && (
+                                                        <div className="mt-3 flex flex-wrap gap-2">
+                                                            {ann.attachedFiles.map((file, idx) => (
+                                                                <a key={idx} href={`${API_BASE}${file.fileUrl}`} target="_blank" rel="noopener noreferrer" className="text-[10px] bg-slate-50 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 px-2.5 py-1.5 rounded-md border border-slate-200 hover:border-emerald-200 flex items-center gap-1.5 transition-colors font-bold">
+                                                                    <span>📎</span>
+                                                                    <span className="truncate max-w-[120px]">{file.fileName}</span>
+                                                                </a>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex items-start shrink-0">
+                                                    <button onClick={() => handleDeleteAnnouncement(ann.id)} className="w-full md:w-auto bg-red-50 hover:bg-red-600 text-red-600 hover:text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 border border-red-100 hover:border-red-600">
+                                                        <span className="text-lg">🗑️</span>
+                                                        <span>Yayından Kaldır</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
                         </div>
                     )}
 
@@ -579,6 +776,7 @@ export default function TeacherPanel() {
 
                                             <form onSubmit={handleSendMessage} className="flex flex-col flex-1 overflow-y-auto pr-2 pb-2">
                                                 <div className="space-y-6">
+
                                                     <div className="relative z-20">
                                                         <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Kime (Alıcı Seçin) *</label>
                                                         {selectedReceiverName ? (
@@ -832,6 +1030,7 @@ export default function TeacherPanel() {
                 </div>
             </main>
 
+            {/* 🚨 ÇIKIŞ ONAY PENCERESİ */}
             {showLogoutModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 border border-slate-200 relative text-center">

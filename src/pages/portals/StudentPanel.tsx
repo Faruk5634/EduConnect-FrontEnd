@@ -16,6 +16,11 @@ interface StudentProfile {
     email: string;
 }
 
+interface AnnouncementFile {
+    fileName: string;
+    fileUrl: string;
+}
+
 interface Announcement {
     id: number;
     title: string;
@@ -23,9 +28,8 @@ interface Announcement {
     createdDate: string;
     authorName: string;
     type: string;
-    classroomName: string;
-    fileName?: string;
-    fileUrl?: string;
+    targetClasses: string[]; // 🚀 GÜNCELLEME: Liste olarak geliyor
+    attachedFiles?: AnnouncementFile[];
 }
 
 interface Message {
@@ -76,7 +80,6 @@ export default function StudentPanel() {
         firstName: '', lastName: '', email: '', phone: '', currentPassword: '', newPassword: ''
     });
 
-    // 🧠 GERİ TUŞU KORUMASI (Akıllı Durum Tahsisi)
     const isNotHome = activeTab !== 'announcements' || profileViewMode !== 'overview' || rightPaneMode !== 'EMPTY' || selectedAnnouncement !== null;
     const isNotHomeRef = useRef(isNotHome);
 
@@ -150,9 +153,13 @@ export default function StudentPanel() {
             }));
 
             const annRes = await api.get('/announcements');
-            const filteredAnnouncements = annRes.data.filter((ann: Announcement) =>
-                ann.classroomName === "Genel Duyuru" || ann.classroomName === profileRes.data.grade
-            );
+
+            // 🚀 GÜNCELLEME: Öğrencinin sınıfı, hedef sınıflar listesinde (targetClasses) var mı diye kontrol ediyoruz
+            const filteredAnnouncements = annRes.data.filter((ann: Announcement) => {
+                if (!ann.targetClasses || ann.targetClasses.length === 0) return true;
+                return ann.targetClasses.includes("Genel Duyuru") || ann.targetClasses.includes(profileRes.data.grade);
+            });
+
             setAnnouncements(filteredAnnouncements);
 
             await fetchMessages();
@@ -252,7 +259,6 @@ export default function StudentPanel() {
         }
     };
 
-    // 🚪 🚀 GÜVENLİ ÇIKIŞ
     const handleLogoutConfirm = () => {
         localStorage.clear();
         navigate('/', { replace: true });
@@ -398,8 +404,10 @@ export default function StudentPanel() {
                                             <span className="bg-white/90 text-slate-800 px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase shadow-sm">
                                                 {selectedAnnouncement.type === 'HOMEWORK' ? '📝 ÖDEV' : selectedAnnouncement.type === 'EXAM_INFO' ? '🎯 SINAV' : selectedAnnouncement.type === 'EVENT' ? '🎉 ETKİNLİK' : '📢 GENEL'}
                                             </span>
-                                            <span className="bg-white/20 backdrop-blur-md text-white px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase border border-white/30 shadow-sm">
-                                                {selectedAnnouncement.classroomName}
+
+                                            {/* 🚀 GÜNCELLEME: Sınıf isimlerini virgülle yan yana diz */}
+                                            <span className="bg-white/20 backdrop-blur-md text-white px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase border border-white/30 shadow-sm max-w-[300px] truncate" title={selectedAnnouncement.targetClasses?.join(', ')}>
+                                                {selectedAnnouncement.targetClasses?.join(', ') || 'Genel Duyuru'}
                                             </span>
                                         </div>
                                     </div>
@@ -417,14 +425,19 @@ export default function StudentPanel() {
                                             </div>
                                         </div>
                                         <div className="prose max-w-none text-slate-600 font-medium leading-relaxed whitespace-pre-wrap text-lg">{selectedAnnouncement.content}</div>
-                                        {selectedAnnouncement.fileUrl && (
+
+                                        {selectedAnnouncement.attachedFiles && selectedAnnouncement.attachedFiles.length > 0 && (
                                             <div className="mt-12 pt-8 border-t border-slate-100 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
-                                                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"><span>📎</span> Ekli Dosyalar</h4>
-                                                <a href={`http://localhost:8080${selectedAnnouncement.fileUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 bg-white hover:bg-indigo-50 text-indigo-700 px-6 py-4 rounded-xl text-sm font-bold transition-all shadow-sm border border-slate-200 hover:border-indigo-200 hover:shadow-md">
-                                                    <span className="text-2xl text-indigo-500">📄</span>
-                                                    <span>{selectedAnnouncement.fileName || 'Dosyayı Görüntüle / İndir'}</span>
-                                                    <span className="ml-4 text-slate-400">⬇</span>
-                                                </a>
+                                                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"><span>📎</span> Ekli Dosyalar ({selectedAnnouncement.attachedFiles.length})</h4>
+                                                <div className="flex flex-wrap gap-4">
+                                                    {selectedAnnouncement.attachedFiles.map((file, idx) => (
+                                                        <a key={idx} href={`http://localhost:8080${file.fileUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-white hover:bg-indigo-50 text-indigo-700 px-6 py-4 rounded-xl text-sm font-bold transition-all shadow-sm border border-slate-200 hover:border-indigo-200 hover:shadow-md">
+                                                            <span className="text-2xl text-indigo-500 flex-shrink-0">📄</span>
+                                                            <span className="truncate max-w-[200px]" title={file.fileName}>{file.fileName || 'Dosyayı İndir'}</span>
+                                                            <span className="text-slate-400 flex-shrink-0">⬇</span>
+                                                        </a>
+                                                    ))}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -452,14 +465,20 @@ export default function StudentPanel() {
                                                         </div>
                                                         <div className="flex flex-col items-end gap-2">
                                                             {getTypeBadge(ann.type)}
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase">{ann.classroomName}</span>
+                                                            {/* 🚀 GÜNCELLEME: Sınıf isimlerini virgülle yan yana diz */}
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase truncate max-w-[150px]" title={ann.targetClasses?.join(', ')}>
+                                                                {ann.targetClasses?.join(', ') || 'Genel Duyuru'}
+                                                            </span>
                                                         </div>
                                                     </div>
                                                     <h4 className="text-xl font-black text-slate-800 mb-2 group-hover:text-indigo-600 transition-colors">{ann.title}</h4>
                                                     <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap mb-4 line-clamp-3">{ann.content}</p>
                                                     <div className="mt-4 pt-4 border-t border-slate-50 flex items-center justify-between">
                                                         <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">Detayları Oku →</span>
-                                                        {ann.fileUrl && <span className="text-lg bg-slate-50 w-8 h-8 flex items-center justify-center rounded-lg text-slate-500">📎</span>}
+
+                                                        {ann.attachedFiles && ann.attachedFiles.length > 0 && (
+                                                            <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-md flex items-center gap-1 flex-shrink-0">📎 {ann.attachedFiles.length} Dosya</span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))
@@ -520,11 +539,7 @@ export default function StudentPanel() {
                                         ) : (
                                             <div className="divide-y divide-slate-100">
                                                 {displayedMessages.map(msg => (
-                                                    <div
-                                                        key={msg.id}
-                                                        onClick={() => handleReadMessage(msg)}
-                                                        className={`p-4 cursor-pointer hover:bg-slate-50 transition-colors flex flex-col gap-1 border-l-4 ${selectedMessage?.id === msg.id ? 'border-l-indigo-500 bg-indigo-50/30' : !msg.isRead && msg.type === 'INBOX' ? 'border-l-indigo-500 bg-slate-50' : 'border-l-transparent'}`}
-                                                    >
+                                                    <div key={msg.id} onClick={() => handleReadMessage(msg)} className={`p-4 cursor-pointer hover:bg-slate-50 transition-colors flex flex-col gap-1 border-l-4 ${selectedMessage?.id === msg.id ? 'border-l-indigo-500 bg-indigo-50/30' : !msg.isRead && msg.type === 'INBOX' ? 'border-l-indigo-500 bg-slate-50' : 'border-l-transparent'}`}>
                                                         <div className="flex justify-between items-baseline">
                                                             <p className={`text-sm truncate flex items-center ${!msg.isRead && msg.type === 'INBOX' ? 'font-black text-slate-900' : 'font-bold text-slate-700'}`}>
                                                                 {msg.type === 'INBOX' ? msg.sender : `Alıcı: ${msg.sender}`}
@@ -541,7 +556,6 @@ export default function StudentPanel() {
                                 </div>
 
                                 <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col relative">
-
                                     {rightPaneMode === 'EMPTY' && (
                                         <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-10 bg-slate-50">
                                             <div className="w-24 h-24 bg-slate-200 rounded-full flex items-center justify-center text-4xl mb-6 text-slate-400">✉️</div>
@@ -553,21 +567,19 @@ export default function StudentPanel() {
                                         <div className="absolute inset-0 flex flex-col animate-fade-in bg-white">
                                             <div className="p-8 border-b border-slate-100 bg-slate-50 shrink-0">
                                                 <h2 className="text-2xl font-black text-slate-800 mb-4">{selectedMessage.subject}</h2>
-                                                <div className="flex justify-between items-center">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg font-black">
-                                                            {selectedMessage.sender.charAt(0)}
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-bold text-slate-800">{mailBoxView === 'INBOX' ? 'Kimden:' : 'Kime:'} <span className="text-emerald-700">{selectedMessage.sender}</span></p>
-                                                            <p className="text-[11px] font-bold text-slate-400 mt-0.5">{selectedMessage.date} - {selectedMessage.time}</p>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-lg font-black">
+                                                        {selectedMessage.sender.charAt(0)}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-bold text-slate-800">{mailBoxView === 'INBOX' ? 'Kimden:' : 'Kime:'} <span className="text-indigo-700">{selectedMessage.sender}</span></p>
+                                                        <p className="text-[11px] font-bold text-slate-400 mt-0.5">{selectedMessage.date} - {selectedMessage.time}</p>
 
-                                                            {selectedMessage.isSentByParent && (
-                                                                <span className="inline-block mt-2 bg-purple-100 text-purple-700 border border-purple-200 px-3 py-1 rounded-md text-[10px] font-black tracking-widest uppercase shadow-sm">
-                                                                    🛡️ VELİ TARAFINDAN GÖNDERİLDİ
-                                                                </span>
-                                                            )}
-                                                        </div>
+                                                        {selectedMessage.isSentByParent && (
+                                                            <span className="inline-block mt-2 bg-purple-100 text-purple-700 border border-purple-200 px-3 py-1 rounded-md text-[10px] font-black tracking-widest uppercase shadow-sm">
+                                                                🛡️ VELİ TARAFINDAN GÖNDERİLDİ
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -583,7 +595,7 @@ export default function StudentPanel() {
                                                         setSelectedReceiverName(selectedMessage.sender);
                                                         setMsgSubject(`RE: ${selectedMessage.subject}`);
                                                         setRightPaneMode('COMPOSE');
-                                                    }} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2">
+                                                    }} className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2">
                                                         <span>↩️</span> Yanıtla
                                                     </button>
                                                 </div>
@@ -595,15 +607,15 @@ export default function StudentPanel() {
                                         <div className="absolute inset-0 flex flex-col p-8 animate-fade-in bg-white">
                                             <h3 className="text-xl font-black text-slate-800 mb-6 shrink-0">Yeni İleti Gönder</h3>
 
-                                            <form onSubmit={handleSendMessage} className="flex flex-col flex-1 overflow-y-auto pr-2 pb-2">
+                                            <form onSubmit={handleSendMessage} className="flex flex-col flex-1 overflow-y-auto pr-2 pb-4">
                                                 <div className="space-y-6">
 
                                                     <div className="relative z-20">
                                                         <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Kime (Alıcı Seçin) *</label>
                                                         {selectedReceiverName ? (
-                                                            <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 shadow-sm">
-                                                                <span className="font-bold text-blue-800">{selectedReceiverName}</span>
-                                                                <button type="button" onClick={() => {setMsgReceiverId(''); setSelectedReceiverName('');}} className="text-blue-500 hover:text-red-500 font-bold transition-colors text-sm px-2">
+                                                            <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3 shadow-sm">
+                                                                <span className="font-bold text-indigo-800">{selectedReceiverName}</span>
+                                                                <button type="button" onClick={() => {setMsgReceiverId(''); setSelectedReceiverName('');}} className="text-indigo-500 hover:text-red-500 font-bold transition-colors text-sm px-2">
                                                                     ✕ Değiştir
                                                                 </button>
                                                             </div>
@@ -614,7 +626,7 @@ export default function StudentPanel() {
                                                                         type="text"
                                                                         value={userSearchQuery}
                                                                         onChange={e => setUserSearchQuery(e.target.value)}
-                                                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 pr-12 text-sm font-bold focus:bg-white focus:border-blue-500 outline-none transition-all shadow-inner"
+                                                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 pr-12 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all shadow-inner"
                                                                         placeholder="Kişi aramak için isim veya kullanıcı adı yazın (En az 2 harf)..."
                                                                     />
                                                                     <div className="absolute right-4 text-slate-400 pointer-events-none flex items-center justify-center">
@@ -626,9 +638,9 @@ export default function StudentPanel() {
                                                                     {showSearchDropdown && searchResults.length > 0 && (
                                                                         <div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in-down">
                                                                             {searchResults.map((user: any) => (
-                                                                                <div key={user.userId} onClick={() => handleSelectUser(user)} className="px-5 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between transition-colors">
+                                                                                <div key={user.userId} onClick={() => handleSelectUser(user)} className="px-5 py-3 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between transition-colors">
                                                                                     <p className="text-sm font-bold text-slate-800">{user.fullName}</p>
-                                                                                    <p className="text-[10px] font-black text-blue-600 bg-blue-100 px-2 py-1 rounded uppercase tracking-widest">{user.role}</p>
+                                                                                    <p className="text-[10px] font-black text-indigo-600 bg-indigo-100 px-2 py-1 rounded uppercase tracking-widest">{user.role}</p>
                                                                                 </div>
                                                                             ))}
                                                                         </div>
@@ -650,24 +662,25 @@ export default function StudentPanel() {
                                                             value={msgSubject}
                                                             onChange={e => setMsgSubject(e.target.value)}
                                                             required
-                                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-bold focus:bg-white focus:border-blue-500 outline-none transition-all"
+                                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-bold focus:bg-white focus:border-indigo-500 outline-none transition-all"
                                                             placeholder="Mesajınızın konusu..."
                                                         />
                                                     </div>
+
                                                     <div className="flex flex-col relative z-0 flex-1 min-h-[150px]">
                                                         <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Mesajınız *</label>
                                                         <textarea
                                                             value={msgContent}
                                                             onChange={e => setMsgContent(e.target.value)}
                                                             required
-                                                            className="flex-1 w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium focus:bg-white focus:border-blue-500 outline-none transition-all resize-y min-h-[150px]"
+                                                            className="flex-1 w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium focus:bg-white focus:border-indigo-500 outline-none transition-all resize-y min-h-[150px]"
                                                             placeholder="Mesajınızı detaylıca yazın..."
                                                         />
                                                     </div>
                                                 </div>
 
                                                 <div className="pt-8 pb-4 shrink-0 flex justify-end mt-auto">
-                                                    <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-3 rounded-lg font-bold transition-all shadow-md">
+                                                    <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-3 rounded-lg font-bold transition-all shadow-md">
                                                         GÖNDER
                                                     </button>
                                                 </div>
@@ -681,7 +694,6 @@ export default function StudentPanel() {
 
                     {activeTab === 'profile' && (
                         <div className="max-w-4xl mx-auto h-full">
-
                             {profileViewMode === 'overview' && (
                                 <div className="animate-fade-in-down pb-10">
                                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
@@ -731,7 +743,6 @@ export default function StudentPanel() {
                                         </div>
                                     </div>
 
-                                    {/* 🚀 DEĞİŞİKLİK BURADA: VELİYE DÜZENLEME BUTONLARI GÖSTERİLMEZ, BİLGİ KARTI GÖSTERİLİR */}
                                     {!isParentViewing ? (
                                         <>
                                             <h3 className="text-xl font-black text-slate-800 mb-4">Hesap İşlemleri</h3>
@@ -855,7 +866,7 @@ export default function StudentPanel() {
 
             {/* 🚨 ÇIKIŞ ONAY PENCERESİ */}
             {showLogoutModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md animate-fade-in">
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 border border-slate-200 relative animate-scale-in z-50 text-center">
                         <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-6">
                             <span className="text-4xl">🚪</span>
