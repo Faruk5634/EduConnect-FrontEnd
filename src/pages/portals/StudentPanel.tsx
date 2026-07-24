@@ -28,7 +28,7 @@ interface Announcement {
     createdDate: string;
     authorName: string;
     type: string;
-    targetClasses: string[]; // 🚀 GÜNCELLEME: Liste olarak geliyor
+    targetClasses: string[];
     attachedFiles?: AnnouncementFile[];
 }
 
@@ -53,7 +53,8 @@ export default function StudentPanel() {
     const isParentViewing = location.state?.isParentViewing || false;
     const studentSchoolNumber = location.state?.studentSchoolNumber;
 
-    const [activeTab, setActiveTab] = useState('announcements');
+    // 🚀 GÜNCELLEME: Varsayılan sekme artık 'overview' (Anasayfa)
+    const [activeTab, setActiveTab] = useState('overview');
     const [profile, setProfile] = useState<StudentProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -61,6 +62,11 @@ export default function StudentPanel() {
 
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+
+    // 🚀 YENİ EKLENENLER: Duyuru Filtreleme State'leri
+    const [announcementSearch, setAnnouncementSearch] = useState('');
+    const [announcementTypeFilter, setAnnouncementTypeFilter] = useState('ALL');
+    const [announcementSort, setAnnouncementSort] = useState('NEWEST');
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [mailBoxView, setMailBoxView] = useState<'INBOX' | 'SENT'>('INBOX');
@@ -80,7 +86,7 @@ export default function StudentPanel() {
         firstName: '', lastName: '', email: '', phone: '', currentPassword: '', newPassword: ''
     });
 
-    const isNotHome = activeTab !== 'announcements' || profileViewMode !== 'overview' || rightPaneMode !== 'EMPTY' || selectedAnnouncement !== null;
+    const isNotHome = activeTab !== 'overview' || profileViewMode !== 'overview' || rightPaneMode !== 'EMPTY' || selectedAnnouncement !== null;
     const isNotHomeRef = useRef(isNotHome);
 
     useEffect(() => {
@@ -89,7 +95,7 @@ export default function StudentPanel() {
 
         const handlePopState = () => {
             if (isNotHomeRef.current) {
-                setActiveTab('announcements');
+                setActiveTab('overview');
                 setProfileViewMode('overview');
                 setRightPaneMode('EMPTY');
                 setSelectedAnnouncement(null);
@@ -153,8 +159,6 @@ export default function StudentPanel() {
             }));
 
             const annRes = await api.get('/announcements');
-
-            // 🚀 GÜNCELLEME: Öğrencinin sınıfı, hedef sınıflar listesinde (targetClasses) var mı diye kontrol ediyoruz
             const filteredAnnouncements = annRes.data.filter((ann: Announcement) => {
                 if (!ann.targetClasses || ann.targetClasses.length === 0) return true;
                 return ann.targetClasses.includes("Genel Duyuru") || ann.targetClasses.includes(profileRes.data.grade);
@@ -271,10 +275,10 @@ export default function StudentPanel() {
 
     const getTypeBadge = (type: string) => {
         switch (type) {
-            case 'HOMEWORK': return <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-[10px] font-black tracking-widest uppercase">📝 ÖDEV</span>;
-            case 'EXAM_INFO': return <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-[10px] font-black tracking-widest uppercase">🎯 SINAV</span>;
-            case 'EVENT': return <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-[10px] font-black tracking-widest uppercase">🎉 ETKİNLİK</span>;
-            default: return <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] font-black tracking-widest uppercase">📢 GENEL</span>;
+            case 'HOMEWORK': return <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-[10px] font-black tracking-widest uppercase border border-orange-200">📝 ÖDEV</span>;
+            case 'EXAM_INFO': return <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-[10px] font-black tracking-widest uppercase border border-red-200">🎯 SINAV</span>;
+            case 'EVENT': return <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-[10px] font-black tracking-widest uppercase border border-purple-200">🎉 ETKİNLİK</span>;
+            default: return <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] font-black tracking-widest uppercase border border-blue-200">📢 GENEL</span>;
         }
     };
 
@@ -287,6 +291,21 @@ export default function StudentPanel() {
         }
     };
 
+    // 🚀 DUYURULARI FİLTRELEME VE SIRALAMA MOTORU
+    const processedAnnouncements = announcements
+        .filter(ann => {
+            const matchesSearch = ann.title.toLowerCase().includes(announcementSearch.toLowerCase()) ||
+                ann.content.toLowerCase().includes(announcementSearch.toLowerCase()) ||
+                ann.authorName.toLowerCase().includes(announcementSearch.toLowerCase());
+            const matchesType = announcementTypeFilter === 'ALL' || ann.type === announcementTypeFilter;
+            return matchesSearch && matchesType;
+        })
+        .sort((a, b) => {
+            const timeA = new Date(a.createdDate).getTime();
+            const timeB = new Date(b.createdDate).getTime();
+            return announcementSort === 'NEWEST' ? timeB - timeA : timeA - timeB;
+        });
+
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-indigo-600 font-bold animate-pulse text-xl">Öğrenci Paneli Hazırlanıyor...</div>;
 
     const displayedMessages = messages.filter(m => m.type === mailBoxView);
@@ -296,8 +315,9 @@ export default function StudentPanel() {
         <div className="min-h-screen bg-slate-50 text-slate-800 flex font-sans selection:bg-indigo-500/30">
 
             <aside className="w-72 bg-white border-r border-slate-200 flex flex-col shadow-sm z-10 shrink-0">
-                <div onClick={() => !isParentViewing && navigate('/campus')} className={`p-8 border-b border-slate-100 ${!isParentViewing ? 'cursor-pointer hover:bg-slate-50 transition-colors group' : ''}`}>
-                    <h1 className={`text-3xl font-black text-indigo-600 tracking-tight ${!isParentViewing && 'group-hover:scale-105 transition-transform origin-left'}`}>
+                {/* 🚀 BUG FIX: Logoya tıklandığında artık login'e atmaz, panel içindeki anasayfaya geçer */}
+                <div onClick={() => { setActiveTab('overview'); setProfileViewMode('overview'); setSelectedAnnouncement(null); }} className="p-8 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors group">
+                    <h1 className="text-3xl font-black text-indigo-600 tracking-tight group-hover:scale-105 transition-transform origin-left">
                         EduConnect
                     </h1>
                     <p className="text-xs text-slate-500 mt-2 uppercase tracking-widest font-bold flex items-center gap-1">
@@ -307,6 +327,10 @@ export default function StudentPanel() {
                 </div>
 
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+                    <button onClick={() => {setActiveTab('overview'); setProfileViewMode('overview'); setSelectedAnnouncement(null);}} className={`w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all group font-semibold ${activeTab === 'overview' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-indigo-700'}`}>
+                        <span className="text-xl group-hover:scale-110 transition-transform">🏠</span>
+                        <span className="tracking-wide">Anasayfa</span>
+                    </button>
                     <button onClick={() => {setActiveTab('announcements'); setProfileViewMode('overview'); setSelectedAnnouncement(null);}} className={`w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all group font-semibold ${activeTab === 'announcements' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-indigo-700'}`}>
                         <span className="text-xl group-hover:scale-110 transition-transform">📢</span>
                         <span className="tracking-wide">Duyuru & Ödevler</span>
@@ -390,6 +414,41 @@ export default function StudentPanel() {
 
                 <div className="flex-1 overflow-y-auto p-10 bg-slate-50/50">
 
+                    {/* 🚀 YENİ EKLENEN ANASAYFA (OVERVIEW) */}
+                    {activeTab === 'overview' && (
+                        <div className="max-w-6xl mx-auto space-y-8 animate-fade-in-down">
+                            <div className="bg-gradient-to-r from-indigo-600 to-blue-800 rounded-3xl p-10 text-white shadow-lg relative overflow-hidden">
+                                <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-[80px]"></div>
+                                <h1 className="text-4xl font-black relative z-10">Eğitim Portalı, {profile?.firstName}! 🚀</h1>
+                                <p className="mt-3 text-indigo-100 relative z-10 font-medium text-lg">Derslerinde başarılar. Güncel okul durumun aşağıdadır.</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div onClick={() => setActiveTab('announcements')} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 hover:-translate-y-1 transition-transform cursor-pointer group">
+                                    <div className="w-16 h-16 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-3xl font-black group-hover:bg-blue-100 transition-colors">📢</div>
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-400 uppercase">Sınıf Panosu</p>
+                                        <p className="text-3xl font-black text-slate-800">{announcements.length} <span className="text-sm text-slate-400 font-medium">Duyuru</span></p>
+                                    </div>
+                                </div>
+                                <div onClick={() => setActiveTab('messages')} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 hover:-translate-y-1 transition-transform cursor-pointer group">
+                                    <div className="w-16 h-16 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-3xl font-black group-hover:bg-purple-100 transition-colors">✉️</div>
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-400 uppercase">Okunmamış Mesaj</p>
+                                        <p className="text-3xl font-black text-slate-800">{unreadCount}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                                    <div className="w-16 h-16 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center text-3xl font-black">🏫</div>
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-400 uppercase">Sınıfın</p>
+                                        <p className="text-2xl font-black text-slate-800">{profile?.grade || 'Atanmadı'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {activeTab === 'announcements' && (
                         <div className="max-w-7xl mx-auto animate-fade-in-down">
                             {selectedAnnouncement ? (
@@ -405,7 +464,6 @@ export default function StudentPanel() {
                                                 {selectedAnnouncement.type === 'HOMEWORK' ? '📝 ÖDEV' : selectedAnnouncement.type === 'EXAM_INFO' ? '🎯 SINAV' : selectedAnnouncement.type === 'EVENT' ? '🎉 ETKİNLİK' : '📢 GENEL'}
                                             </span>
 
-                                            {/* 🚀 GÜNCELLEME: Sınıf isimlerini virgülle yan yana diz */}
                                             <span className="bg-white/20 backdrop-blur-md text-white px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase border border-white/30 shadow-sm max-w-[300px] truncate" title={selectedAnnouncement.targetClasses?.join(', ')}>
                                                 {selectedAnnouncement.targetClasses?.join(', ') || 'Genel Duyuru'}
                                             </span>
@@ -445,14 +503,50 @@ export default function StudentPanel() {
                             ) : (
                                 <div className="flex flex-col-reverse lg:flex-row gap-8">
                                     <div className="flex-[2] space-y-6">
-                                        <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><span>📰</span> Güncel Akış</h3>
-                                        {announcements.length === 0 ? (
+
+                                        {/* 🚀 GÜNCELLEME: FİLTRE VE ARAMA ÇUBUĞU */}
+                                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 mb-8">
+                                            <div className="flex-1 relative">
+                                                <span className="absolute left-4 top-3 text-slate-400">🔍</span>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Duyuru veya ödev ara..."
+                                                    value={announcementSearch}
+                                                    onChange={e => setAnnouncementSearch(e.target.value)}
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
+                                                />
+                                            </div>
+                                            <div className="flex gap-4">
+                                                <select
+                                                    value={announcementTypeFilter}
+                                                    onChange={e => setAnnouncementTypeFilter(e.target.value)}
+                                                    className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-indigo-500 outline-none cursor-pointer"
+                                                >
+                                                    <option value="ALL">Tüm Kategoriler</option>
+                                                    <option value="GENERAL">📢 Genel</option>
+                                                    <option value="HOMEWORK">📝 Ödevler</option>
+                                                    <option value="EXAM_INFO">🎯 Sınavlar</option>
+                                                    <option value="EVENT">🎉 Etkinlikler</option>
+                                                </select>
+                                                <select
+                                                    value={announcementSort}
+                                                    onChange={e => setAnnouncementSort(e.target.value)}
+                                                    className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-indigo-500 outline-none cursor-pointer"
+                                                >
+                                                    <option value="NEWEST">Yeniden Eskiye</option>
+                                                    <option value="OLDEST">Eskiden Yeniye</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {processedAnnouncements.length === 0 ? (
                                             <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-sm">
                                                 <div className="text-5xl mb-4">📭</div>
-                                                <h4 className="text-lg font-bold text-slate-700">Henüz bir duyuru yok</h4>
+                                                <h4 className="text-lg font-bold text-slate-700">Duyuru bulunamadı</h4>
+                                                <p className="text-sm text-slate-500 mt-2">Arama kriterlerinize uyan bir içerik yok.</p>
                                             </div>
                                         ) : (
-                                            announcements.map((ann) => (
+                                            processedAnnouncements.map((ann) => (
                                                 <div key={ann.id} onClick={() => setSelectedAnnouncement(ann)} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer relative overflow-hidden group hover:-translate-y-1">
                                                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${ann.type === 'HOMEWORK' ? 'bg-orange-400' : ann.type === 'EXAM_INFO' ? 'bg-red-400' : ann.type === 'EVENT' ? 'bg-purple-400' : 'bg-blue-400'}`}></div>
                                                     <div className="flex justify-between items-start mb-4">
@@ -465,7 +559,6 @@ export default function StudentPanel() {
                                                         </div>
                                                         <div className="flex flex-col items-end gap-2">
                                                             {getTypeBadge(ann.type)}
-                                                            {/* 🚀 GÜNCELLEME: Sınıf isimlerini virgülle yan yana diz */}
                                                             <span className="text-[10px] font-bold text-slate-400 uppercase truncate max-w-[150px]" title={ann.targetClasses?.join(', ')}>
                                                                 {ann.targetClasses?.join(', ') || 'Genel Duyuru'}
                                                             </span>
@@ -484,8 +577,10 @@ export default function StudentPanel() {
                                             ))
                                         )}
                                     </div>
+
+                                    {/* Sağ Taraftaki Profil Kartı */}
                                     <div className="flex-1">
-                                        <div className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden sticky top-0">
+                                        <div className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden sticky top-6">
                                             <div className="bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 p-8 text-white relative flex flex-col items-center">
                                                 <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
                                                 <div className="w-24 h-24 bg-white/10 backdrop-blur-sm text-white rounded-full flex items-center justify-center text-4xl font-black shadow-2xl border-4 border-white/20 relative z-10 mb-4">
