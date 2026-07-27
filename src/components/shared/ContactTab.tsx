@@ -31,10 +31,10 @@ const ContactTab: React.FC = () => {
     const [composeSubject, setComposeSubject] = useState('');
     const [composeContent, setComposeContent] = useState('');
 
-    const userRole = localStorage.getItem('userRole');
+    // 🚀 DÜZELTME: localStorage anahtarı 'role' olarak güncellendi!
+    const userRole = localStorage.getItem('role');
     const isSuperAdmin = userRole === 'ROLE_SUPER_ADMIN';
 
-    // 🚀 1. GERÇEK VERİLERİ ÇEK
     const fetchMessages = async () => {
         try {
             const msgRes = await api.get('/messages');
@@ -66,7 +66,6 @@ const ContactTab: React.FC = () => {
 
     const filteredMessages = messages.filter(msg => msg.type === activeFolder);
 
-    // 🚀 2. MESAJI OKUNDU İŞARETLE
     const handleReadMessage = async (msg: Message) => {
         setSelectedMessage(msg);
         if (!msg.isRead && activeFolder === 'INBOX') {
@@ -79,7 +78,6 @@ const ContactTab: React.FC = () => {
         }
     };
 
-    // 🚀 3. GERÇEK MESAJ GÖNDERİMİ
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
@@ -91,14 +89,12 @@ const ContactTab: React.FC = () => {
 
             showToast(isSuperAdmin ? 'Mesajınız iletildi!' : 'Destek talebiniz başarıyla iletildi!', 'success');
 
-            // Başarılı olursa formu temizle ve Gönderilenler kutusuna geç
             setActiveFolder('SENT');
             setSelectedMessage(null);
             setComposeSubject('');
             setComposeContent('');
             if (!isSuperAdmin) setComposeTo('SUPER_ADMIN');
 
-            // Mesajları veritabanından tekrar çek ki listeye düşsün
             await fetchMessages();
 
         } catch (error) {
@@ -109,7 +105,6 @@ const ContactTab: React.FC = () => {
 
     if (loading) return <div className="text-center py-20 text-slate-400 font-medium animate-pulse">📡 İletişim paneli senkronize ediliyor...</div>;
 
-    // ----- ARAYÜZ (HTML/JSX) KISMI AYNEN KALIYOR -----
     return (
         <div className="animate-fade-in-down h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl flex flex-col">
             <div className="mb-6 flex justify-between items-end">
@@ -128,8 +123,6 @@ const ContactTab: React.FC = () => {
             </div>
 
             <div className="flex-1 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col md:flex-row min-h-[500px]">
-
-                {/* SOL KLASÖR PANELİ */}
                 <div className="w-full md:w-1/3 border-r border-slate-200 flex flex-col bg-slate-50">
                     <div className="flex border-b border-slate-200">
                         <button onClick={() => { setActiveFolder('INBOX'); setSelectedMessage(null); }} className={`flex-1 py-4 text-sm font-bold border-b-2 transition-colors ${activeFolder === 'INBOX' ? 'border-blue-700 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500 hover:bg-slate-100'}`}>
@@ -161,7 +154,6 @@ const ContactTab: React.FC = () => {
                     </div>
                 </div>
 
-                {/* SAĞ MESAJ/FORM PANELİ */}
                 <div className="w-full md:w-2/3 flex flex-col bg-white">
                     {activeFolder === 'COMPOSE' ? (
                         <div className="p-8 flex flex-col h-full animate-fade-in">
@@ -169,8 +161,6 @@ const ContactTab: React.FC = () => {
                                 {isSuperAdmin ? 'Yeni İleti Gönder' : "Sistem Yönetimi'ne Destek Talebi Gönder"}
                             </h3>
                             <form onSubmit={handleSendMessage} className="flex flex-col flex-1 gap-6">
-
-                                {/* 🚀 RÜTBEYE GÖRE DEĞİŞEN ALICI KUTUSU */}
                                 {isSuperAdmin ? (
                                     <div>
                                         <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Kime (Kurum/Yönetici Seçin) *</label>
@@ -210,8 +200,9 @@ const ContactTab: React.FC = () => {
                                 <div>
                                     <h3 className="text-xl font-black text-slate-900">{selectedMessage.subject}</h3>
                                     <div className="flex items-center gap-3 mt-4">
+                                        {/* 🚀 ÇÖKME KORUMASI: Optional Chaining Eklendi */}
                                         <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-black text-sm">
-                                            {selectedMessage.sender.charAt(0)}
+                                            {selectedMessage.sender?.charAt(0) || 'U'}
                                         </div>
                                         <div>
                                             <p className="text-sm font-bold text-slate-800 leading-tight">{selectedMessage.sender}</p>

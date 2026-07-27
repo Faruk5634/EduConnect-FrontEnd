@@ -2,13 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { showToast } from '../../utils/toast';
 
-// 📌 SAYFA MODLARI
 type ViewMode = 'overview' | 'editPersonal' | 'editEmail' | 'editPhone' | 'editPassword';
 
 const ProfileTab: React.FC = () => {
     const [viewMode, setViewMode] = useState<ViewMode>('overview');
 
-    // Profil Verileri
     const [profileData, setProfileData] = useState({
         firstName: 'Yükleniyor...',
         lastName: '',
@@ -21,20 +19,18 @@ const ProfileTab: React.FC = () => {
     const [userId, setUserId] = useState<number | null>(null);
     const [userRole, setUserRole] = useState<string>('');
 
-    // 📡 Verileri Arka Plandan Çekme
     const fetchProfileData = async () => {
         try {
-            // Backend'den veriyi çekmeyi dener (interceptor Authorization ekler)
             const userRes = await api.get('/users/me');
 
             let title = 'Sistem Kullanıcısı';
-            const currentRole = userRes.data.role || localStorage.getItem('userRole') || '';
-            if (currentRole === 'SUPER_ADMIN') title = 'Sistem Kurucusu / Süper Admin';
+            // 🚀 DÜZELTME: localStorage anahtarı 'role' olarak güncellendi!
+            const currentRole = userRes.data.role || localStorage.getItem('role') || '';
+            if (currentRole === 'SUPER_ADMIN' || currentRole === 'ROLE_SUPER_ADMIN') title = 'Sistem Kurucusu / Süper Admin';
 
             setUserId(userRes.data.id || null);
             setUserRole(currentRole || '');
 
-            // API şu anda name olarak birleşik adı döndürebiliyor, parçalayarak first/last dolduralım
             const fullName = userRes.data.name || userRes.data.username || 'Super Admin';
             const parts = fullName.split(' ').filter(Boolean);
             const first = parts.shift() || '';
@@ -49,9 +45,8 @@ const ProfileTab: React.FC = () => {
                 currentPassword: '',
                 roleTitle: title
             });
-        } catch (err) {
-            console.warn("API bulunamadı, varsayılan Super Admin verileri gösteriliyor.");
-            // API YAZILANA KADAR GÖRÜNECEK VARSAYILAN (MOCK) VERİLER
+        } catch (error) {
+            console.warn("API bulunamadı, varsayılan veriler gösteriliyor.");
             setProfileData({
                 firstName: 'Super',
                 lastName: 'Admin',
@@ -70,29 +65,26 @@ const ProfileTab: React.FC = () => {
         fetchProfileData();
     }, []);
 
-    // 💾 Ayar Kaydetme Motoru (şimdi backend'e kaydeder)
     const handleSettingSave = async (e: React.FormEvent) => {
         e.preventDefault();
 
         try {
-                // interceptor Authorization ekler
-
-            // Eğer sadece şifre güncelleniyorsa, currentPassword doğrulaması için /api/users/me'ye gönder
             if (viewMode === 'editPassword') {
                 if (!profileData.currentPassword || !profileData.password) {
                     showToast('Lütfen mevcut şifrenizi ve yeni şifreyi girin.', 'error');
                     return;
                 }
 
-                const payload: any = {
+                // 🚀 DÜZELTME: 'any' kirliliği temizlendi
+                const passwordPayload: Record<string, string> = {
                     password: profileData.password,
                     currentPassword: profileData.currentPassword
                 };
 
-                await api.put('/users/me', payload);
+                await api.put('/users/me', passwordPayload);
             } else {
-                // normal profil alan güncelleme
-                const payload: any = {
+                // 🚀 DÜZELTME: 'any' kirliliği temizlendi
+                const payload: Record<string, string> = {
                     firstName: profileData.firstName,
                     lastName: profileData.lastName,
                     email: profileData.email,
@@ -103,8 +95,7 @@ const ProfileTab: React.FC = () => {
                     payload.password = profileData.password;
                 }
 
-                // Süper adminler için backend'de /api/superadmin/update-admin/{id} mevcut; diğer durumda /api/users/me
-                if (userRole === 'SUPER_ADMIN' && userId) {
+                if ((userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN') && userId) {
                     await api.put(`/superadmin/update-admin/${userId}`, payload);
                 } else {
                     await api.put('/users/me', payload);
@@ -113,27 +104,23 @@ const ProfileTab: React.FC = () => {
 
             showToast('Profil bilgileriniz veritabanına kaydedildi ✅', 'success');
             setViewMode('overview');
-            // yenilenmiş veriyi tekrar çek
             await fetchProfileData();
-            // temizle şifre alanları
-            setProfileData(prev => ({ ...prev, password: '', currentPassword: '' } as any));
-        } catch (err) {
-            console.error('Profil güncellenirken hata:', err);
-            const serverMsg = (err as any)?.response?.data;
-            showToast(serverMsg || 'Profil kaydedilemedi. Lütfen tekrar deneyin.', 'error');
+
+            // 🚀 DÜZELTME: 'as any' zorlaması silindi
+            setProfileData(prev => ({ ...prev, password: '', currentPassword: '' }));
+        } catch (error: unknown) {
+            console.error('Profil güncellenirken hata:', error);
+            const err = error as { response?: { data?: string } };
+            showToast(err?.response?.data || 'Profil kaydedilemedi. Lütfen tekrar deneyin.', 'error');
         }
     };
 
-    // 🔠 İsim Baş harflerini alma
     const getInitials = (first: string, last: string) => {
         const name = `${first || ''} ${last || ''}`.trim();
         if (!name || name === 'Yükleniyor...') return 'SA';
         return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
     };
 
-    // ===========================================================================
-    // 1. GENEL BAKIŞ (OVERVIEW) EKRANI
-    // ===========================================================================
     if (viewMode === 'overview') {
         return (
             <div className="p-6 md:p-10 relative z-10 animate-fade-in-down h-full bg-slate-50 rounded-tl-3xl">
@@ -143,7 +130,6 @@ const ProfileTab: React.FC = () => {
                 </header>
 
                 <div className="max-w-5xl">
-                    {/* 💳 Kurumsal Profil Kartı */}
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
                         <div className="h-28 bg-gradient-to-r from-blue-700 to-indigo-800"></div>
                         <div className="px-8 pb-8 relative">
@@ -168,7 +154,6 @@ const ProfileTab: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* 🎛️ Ayar Butonları Izgarası */}
                     <h3 className="text-lg font-bold text-slate-800 mb-4 border-b border-slate-200 pb-2">Hesap İşlemleri</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <button onClick={() => setViewMode('editPersonal')} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:border-blue-500 hover:shadow-md transition-all flex items-center gap-4 text-left group">
@@ -205,12 +190,8 @@ const ProfileTab: React.FC = () => {
         );
     }
 
-    // ===========================================================================
-    // 2. DETAY & FORM EKRANI (İÇ SAYFA)
-    // ===========================================================================
     return (
         <div className="animate-fade-in-right h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl">
-            {/* Üst Başlık ve Geri Dön Butonu */}
             <div className="flex items-center gap-4 mb-8 pb-4 border-b border-slate-200">
                 <button onClick={() => setViewMode('overview')} className="text-slate-500 hover:text-slate-900 bg-white border border-slate-300 p-2 rounded-md transition-all shadow-sm font-bold px-4">
                     GERİ DÖN
@@ -225,7 +206,6 @@ const ProfileTab: React.FC = () => {
                 </div>
             </div>
 
-            {/* Form Alanı */}
             <div className="max-w-3xl bg-white p-8 md:p-10 rounded-md shadow-sm border border-slate-200">
                 <form onSubmit={handleSettingSave} className="space-y-6">
 
@@ -270,7 +250,6 @@ const ProfileTab: React.FC = () => {
                         </div>
                     )}
 
-                    {/* BUTONLAR */}
                     <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-slate-200">
                         <button type="button" onClick={() => setViewMode('overview')} className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-3 rounded-md font-bold text-sm tracking-widest transition-all">
                             İPTAL
