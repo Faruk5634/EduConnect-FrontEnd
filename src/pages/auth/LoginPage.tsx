@@ -6,14 +6,12 @@ const LoginPage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // 🚀 DÜZELTME: roleId bilgisini de Kampüs Meydanından yakalıyoruz
     const { roleId = 'student', roleTitle = 'Öğrenci', roleIcon = '🎓' } = location.state || {};
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
-    // ⚙️ Ortak Giriş Motoru
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -25,15 +23,14 @@ const LoginPage: React.FC = () => {
             });
 
             const token = response.data.token;
-            const role = response.data.role; // Backend'den gelen asıl ve kesin rütbe
+            const role = response.data.role;
+            const resUsername = response.data.username; // 🚀 BACKEND UYUMU
 
-            // 🚨 GÜVENLİK KİLİDİ 1: Yöneticiler Kampüs kapısından giremez!
             if (role === 'ROLE_SUPER_ADMIN' || role === 'ROLE_ADMIN' || role === 'ROLE_VICE_ADMIN') {
                 setError("Bu portal sadece kampüs kullanıcıları içindir. Lütfen Yönetici Portalı'nı kullanın.");
-                return; // Girişi iptal et, token'ı kaydetme!
+                return;
             }
 
-            // 🚨 GÜVENLİK KİLİDİ 2: Çapraz Kapı Sızıntısını Engelle! (Seçilen Rol == Gerçek Rol olmalı)
             let expectedRole = '';
             if (roleId === 'student') expectedRole = 'ROLE_STUDENT';
             else if (roleId === 'teacher') expectedRole = 'ROLE_TEACHER';
@@ -41,16 +38,16 @@ const LoginPage: React.FC = () => {
 
             if (role !== expectedRole) {
                 setError(`Hatalı Giriş! Bu ekrandan sadece ${roleTitle} yetkisine sahip kişiler giriş yapabilir.`);
-                return; // Girişi iptal et, token'ı kaydetme!
+                return;
             }
 
-            // 🟢 Tüm kilitler başarıyla aşıldıysa biletleri ambara kaldır
+            // 🚀 DÜZELTME: api.ts ile %100 uyumlu anahtarlar
             localStorage.setItem('token', token);
-            localStorage.setItem('userRole', role);
+            localStorage.setItem('role', role);
+            localStorage.setItem('username', resUsername);
 
             console.log(`Kaptan, ${role} olarak giriş başarılı!`);
 
-            // 🚦 Rütbeye Göre İlgili Panele Işınlama
             if (role === 'ROLE_TEACHER') {
                 navigate('/teacher');
             } else if (role === 'ROLE_PARENT') {
@@ -58,11 +55,10 @@ const LoginPage: React.FC = () => {
             } else if (role === 'ROLE_STUDENT') {
                 navigate('/student');
             } else {
-                // Beklenmeyen bir durum olursa Liman'a geri at
                 navigate('/');
             }
 
-        } catch (err: any) {
+        } catch (err) { // 🚀 'any' kirliliği temizlendi
             console.error("Giriş sızıntısı:", err);
             setError('Giriş başarısız! Bilgilerini kontrol et Kaptan.');
         }
@@ -70,15 +66,10 @@ const LoginPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden">
-
-            {/* 🌟 Arka plan aydınlatmaları */}
             <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-600/20 rounded-full blur-3xl pointer-events-none"></div>
             <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-            {/* 🛡️ Form Kartı */}
             <div className="w-full max-w-md bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 p-8 rounded-3xl shadow-2xl z-10 animate-fade-in-down">
-
-                {/* Dinamik Başlık */}
                 <div className="text-center mb-8">
                     <div className="text-6xl mb-4 transform hover:scale-110 transition-transform cursor-default">
                         {roleIcon}

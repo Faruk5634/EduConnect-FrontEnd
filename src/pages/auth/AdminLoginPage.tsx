@@ -9,7 +9,6 @@ const AdminLoginPage: React.FC = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
-    // ⚙️ Gerçek Backend Bağlantı Motoru
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -21,24 +20,24 @@ const AdminLoginPage: React.FC = () => {
             });
 
             const token = response.data.token;
-            const role = response.data.role; // 🚀 Backend'in verdiği gerçek rütbe
+            const role = response.data.role;
+            const resUsername = response.data.username; // 🚀 BACKEND UYUMU: Kullanıcı adını da aldık
 
-            // 🚀 GÜVENLİK KİLİDİ: Sadece Yöneticileri Gemiye Al!
             if (role === 'ROLE_SUPER_ADMIN' || role === 'ROLE_ADMIN' || role === 'ROLE_VICE_ADMIN') {
 
-                // Bileti ve rütbeyi kaydet
+                // 🚀 DÜZELTME: api.ts ile %100 uyumlu anahtarlar
                 localStorage.setItem('token', token);
-                localStorage.setItem('userRole', role);
+                localStorage.setItem('role', role);
+                localStorage.setItem('username', resUsername);
 
                 console.log(`Kaptan, ${role} yetkisiyle giriş başarılı!`);
                 navigate('/admin');
 
             } else {
-                // Öğrenci, Veli veya Öğretmen buraya geldiyse içeri alma!
                 setError("Bu portal sadece yöneticiler içindir. Lütfen Kampüs Portalı'nı kullanın.");
             }
 
-        } catch (err: any) {
+        } catch (err) { // 🚀 'any' kirliliği temizlendi
             console.error("Giriş hatası:", err);
             setError("Giriş başarısız! Kullanıcı adı veya şifre hatalı.");
         }
@@ -46,7 +45,6 @@ const AdminLoginPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden">
-            {/* Arka Plan Efektleri */}
             <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl animate-pulse"></div>
             <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
 
