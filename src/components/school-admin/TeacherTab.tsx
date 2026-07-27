@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { showToast } from '../../utils/toast';
 
-// --- ŞABLONLAR (INTERFACES) ---
 interface ClassroomInfo {
     id: number;
     name: string;
@@ -20,16 +19,13 @@ interface Teacher {
 }
 
 const TeacherTab: React.FC = () => {
-    // 🎛️ Arayüz Durumları
     const [viewMode, setViewMode] = useState<'list' | 'detail' | 'form'>('list');
     const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
 
-    // 📡 Veri Durumları
     const [teachers, setTeachers] = useState<Teacher[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // 📝 Akıllı Form Durumu
     const [teacherForm, setTeacherForm] = useState({
         firstName: '',
         lastName: '',
@@ -40,7 +36,6 @@ const TeacherTab: React.FC = () => {
         email: ''
     });
 
-    // 📚 MEB Standart Branş Listesi (Veri Bütünlüğü İçin)
     const branchOptions = [
         'Almanca', 'Beden Eğitimi', 'Bilişim Teknolojileri', 'Biyoloji',
         'Coğrafya', 'Din Kültürü ve Ahlak Bilgisi', 'Felsefe', 'Fen Bilimleri',
@@ -53,7 +48,6 @@ const TeacherTab: React.FC = () => {
         fetchTeachers();
     }, []);
 
-    // --- VERİ ÇEKME İŞLEMLERİ ---
     const fetchTeachers = async () => {
         setLoading(true);
         try {
@@ -66,14 +60,12 @@ const TeacherTab: React.FC = () => {
         }
     };
 
-    // 🔍 Arama Motoru
     const filteredTeachers = teachers.filter(t => {
         const searchLower = searchTerm.toLowerCase();
         const fullName = `${t.firstName} ${t.lastName}`.toLowerCase();
         return fullName.includes(searchLower) || t.branch.toLowerCase().includes(searchLower);
     });
 
-    // --- ARAYÜZ YÖNLENDİRMELERİ ---
     const goToList = () => {
         setViewMode('list');
         setSelectedTeacher(null);
@@ -96,7 +88,7 @@ const TeacherTab: React.FC = () => {
                 lastName: selectedTeacher.lastName,
                 branch: selectedTeacher.branch,
                 username: selectedTeacher.username || '',
-                password: '', // Şifre güvenlik gereği boş gelir, yazılırsa güncellenir
+                password: '',
                 phone: selectedTeacher.phone || '',
                 email: selectedTeacher.email || ''
             });
@@ -104,11 +96,9 @@ const TeacherTab: React.FC = () => {
         }
     };
 
-    // --- İŞLEM MOTORLARI (KAYIT / GÜNCELLEME / SİLME) ---
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Backend'in beklediği karma payload (Öğretmen + User hesabı bir arada)
         const payload = {
             firstName: teacherForm.firstName,
             lastName: teacherForm.lastName,
@@ -121,11 +111,9 @@ const TeacherTab: React.FC = () => {
 
         try {
             if (selectedTeacher) {
-                // GÜNCELLEME İŞLEMİ
                 await api.put(`/teachers/${selectedTeacher.id}`, payload);
                 showToast("Öğretmen bilgileri başarıyla güncellendi! ✅", 'success');
             } else {
-                // YENİ KAYIT İŞLEMİ
                 await api.post('/teachers', payload);
                 showToast("Öğretmen başarıyla sisteme kaydedildi! 👨‍🏫", 'success');
             }
@@ -151,9 +139,6 @@ const TeacherTab: React.FC = () => {
         }
     };
 
-    // ===========================================================================
-    // 1. LİSTE GÖRÜNÜMÜ (TABLO)
-    // ===========================================================================
     if (viewMode === 'list') {
         return (
             <div className="animate-fade-in-down h-full flex flex-col">
@@ -232,9 +217,6 @@ const TeacherTab: React.FC = () => {
         );
     }
 
-    // ===========================================================================
-    // 2. DETAY GÖRÜNÜMÜ - YENİLENDİ
-    // ===========================================================================
     if (viewMode === 'detail' && selectedTeacher) {
         return (
             <div className="animate-fade-in-right h-full flex flex-col">
@@ -247,12 +229,12 @@ const TeacherTab: React.FC = () => {
 
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6 max-w-4xl mx-auto w-full">
 
-                    {/* 🚀 PREMIUM HEADER */}
                     <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-8 md:p-10 text-white flex flex-col md:flex-row items-center md:items-start gap-6 relative overflow-hidden">
                         <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/20 rounded-full blur-[80px]"></div>
 
+                        {/* 🚀 ÇÖKME KORUMASI: Optional chaining ve varsayılan değerler eklendi */}
                         <div className="w-24 h-24 bg-white/10 backdrop-blur-md text-white rounded-2xl flex items-center justify-center text-4xl font-black shadow-inner border border-white/20 relative z-10 shrink-0">
-                            {selectedTeacher.firstName[0]}{selectedTeacher.lastName[0]}
+                            {selectedTeacher.firstName?.charAt(0) || ''}{selectedTeacher.lastName?.charAt(0) || ''}
                         </div>
                         <div className="relative z-10 text-center md:text-left flex-1">
                             <h3 className="text-3xl md:text-4xl font-black tracking-tight mb-2">{selectedTeacher.firstName} {selectedTeacher.lastName}</h3>
@@ -316,9 +298,6 @@ const TeacherTab: React.FC = () => {
         );
     }
 
-    // ===========================================================================
-    // 3. AKILLI FORM GÖRÜNÜMÜ (Yeni/Düzenle)
-    // ===========================================================================
     if (viewMode === 'form') {
         return (
             <div className="animate-fade-in-right h-full">
@@ -334,7 +313,6 @@ const TeacherTab: React.FC = () => {
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 max-w-4xl">
                     <form onSubmit={handleSubmit} className="space-y-8">
 
-                        {/* 1. Aşama: Kişisel Bilgiler */}
                         <section>
                             <h3 className="text-lg font-bold text-emerald-700 border-b border-slate-100 pb-2 mb-4">1. Kişisel Bilgiler ve Branş</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -363,7 +341,6 @@ const TeacherTab: React.FC = () => {
                             </div>
                         </section>
 
-                        {/* 2. Aşama: Sistem ve İletişim Bilgileri */}
                         <section>
                             <h3 className="text-lg font-bold text-blue-700 border-b border-slate-100 pb-2 mb-4">2. Sistem Giriş ve İletişim Bilgileri</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

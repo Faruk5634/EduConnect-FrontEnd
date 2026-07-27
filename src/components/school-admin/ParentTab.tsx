@@ -116,7 +116,6 @@ const ParentTab: React.FC = () => {
                             </thead>
                             <tbody className="divide-y">
                             {filteredParents.map((parent) => (
-                                /* 🚀 TÜM SATIR TIKLANABİLİR HALE GELDİ */
                                 <tr
                                     key={parent.id}
                                     className="hover:bg-slate-50 cursor-pointer transition-colors"
@@ -128,7 +127,6 @@ const ParentTab: React.FC = () => {
                                         {parent.studentNames ? parent.studentNames.length : 0} Öğrenci
                                     </td>
                                     <td className="p-4 text-right">
-                                        {/* 🚀 BUTONLARA BASINCA SATIRA TIKLANMIŞ GİBİ OLMAMASI İÇİN stopPropagation EKLENDİ */}
                                         <div className="flex justify-end gap-2">
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); setSelectedParent(parent); setViewMode('detail'); }}
@@ -166,12 +164,12 @@ const ParentTab: React.FC = () => {
 
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6 max-w-4xl mx-auto w-full">
 
-                    {/* 🚀 PREMIUM HEADER */}
                     <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-8 md:p-10 text-white flex flex-col md:flex-row items-center md:items-start gap-6 relative overflow-hidden">
                         <div className="absolute right-0 top-0 w-64 h-64 bg-purple-500/20 rounded-full blur-[80px]"></div>
 
+                        {/* 🚀 ÇÖKME KORUMASI: Optional chaining ve varsayılan değerler eklendi */}
                         <div className="w-24 h-24 bg-white/10 backdrop-blur-md text-white rounded-2xl flex items-center justify-center text-4xl font-black shadow-inner border border-white/20 relative z-10 shrink-0">
-                            {selectedParent.firstName.charAt(0)}{selectedParent.lastName.charAt(0)}
+                            {selectedParent.firstName?.charAt(0) || ''}{selectedParent.lastName?.charAt(0) || ''}
                         </div>
                         <div className="relative z-10 text-center md:text-left flex-1">
                             <h3 className="text-3xl md:text-4xl font-black tracking-tight mb-2">{selectedParent.firstName} {selectedParent.lastName}</h3>
@@ -183,7 +181,6 @@ const ParentTab: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Detaylar Kısımı */}
                     <div className="p-8 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-10">
                         <div>
                             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-5 border-b border-slate-100 pb-2">İletişim & Sistem Bilgileri</h4>
@@ -207,7 +204,6 @@ const ParentTab: React.FC = () => {
                         <div>
                             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-5 border-b border-slate-100 pb-2">Sorumlu Olduğu Öğrenciler</h4>
                             <div className="space-y-3">
-                                {/* 🚀 DÜZELTME: Gelen metni ' | ' işaretinden ikiye bölüyoruz (Adı ve Numarası) */}
                                 {selectedParent.studentNames && selectedParent.studentNames.length > 0 ? (
                                     selectedParent.studentNames.map((studentStr, index) => {
                                         const [fullName, stuNo] = studentStr.includes('|') ? studentStr.split('|') : [studentStr, 'Belirtilmemiş'];

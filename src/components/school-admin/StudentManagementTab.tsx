@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../../services/api'; // 🚀 Axios yerine kendi API memurumuzu kullanıyoruz
+import { api } from '../../services/api';
 import { showToast } from '../../utils/toast';
 
-// --- ŞABLONLAR ---
 interface Student {
     id: number;
     firstName: string;
@@ -29,15 +28,12 @@ interface Classroom {
 }
 
 const StudentManagementTab: React.FC = () => {
-    // 🎛️ Arayüz Durumları
     const [viewMode, setViewMode] = useState<'list' | 'detail' | 'form'>('list');
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
-    // 🔍 Arama ve Filtreleme
     const [searchTerm, setSearchTerm] = useState('');
-    const [classFilter, setClassFilter] = useState('ALL'); // 🚀 YENİ EKLENDİ
+    const [classFilter, setClassFilter] = useState('ALL');
 
-    // 📡 Veri Durumları
     const [students, setStudents] = useState<Student[]>([]);
     const [parents, setParents] = useState<Parent[]>([]);
     const [classrooms, setClassrooms] = useState<Classroom[]>([]);
@@ -46,7 +42,7 @@ const StudentManagementTab: React.FC = () => {
 
     const [formData, setFormData] = useState({
         firstName: '', lastName: '', schoolNumber: '', grade: '', gender: 'Belirtilmemiş', parentId: '',
-        username: '', password: '', phone: '', email: '' // 🚀 EKLENDİ
+        username: '', password: '', phone: '', email: ''
     });
 
     useEffect(() => {
@@ -56,7 +52,6 @@ const StudentManagementTab: React.FC = () => {
     const fetchInitialData = async () => {
         setLoading(true);
         try {
-            // api.ts sayesinde header göndermeye gerek kalmadı!
             const [userRes, studentsRes, parentsRes, classroomsRes] = await Promise.allSettled([
                 api.get('/users/me'),
                 api.get('/students/list'),
@@ -76,7 +71,6 @@ const StudentManagementTab: React.FC = () => {
         }
     };
 
-    // 🚀 GELİŞMİŞ FİLTRELEME MOTORU
     const filteredStudents = students.filter(s => {
         const matchesSearch =
             s.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -112,8 +106,8 @@ const StudentManagementTab: React.FC = () => {
             grade: student.grade || '', gender: student.gender || 'Belirtilmemiş',
             parentId: currentParent ? currentParent.id.toString() : '',
             username: student.username || '', password: '',
-            phone: student.phone || '', // 🚀 EKLENDİ
-            email: student.email || ''  // 🚀 EKLENDİ
+            phone: student.phone || '',
+            email: student.email || ''
         });
         setViewMode('form');
     };
@@ -146,13 +140,12 @@ const StudentManagementTab: React.FC = () => {
             }
             goToList();
             fetchInitialData();
-        } catch (err: any) {
+        } catch (err) { // 🚀 'any' türü kaldırıldı
             console.error(err);
             showToast("İşlem sırasında hata oluştu! Numara veya kullanıcı adı zaten sistemde olabilir.", 'error');
         }
     };
 
-    // 🎨 Cinsiyete Göre Renk Rozeti
     const getGenderBadge = (gender?: string) => {
         if (gender === 'Kız') return <span className="bg-pink-50 text-pink-600 border border-pink-200 px-2.5 py-1 rounded-md font-bold text-xs">Kız</span>;
         if (gender === 'Erkek') return <span className="bg-blue-50 text-blue-600 border border-blue-200 px-2.5 py-1 rounded-md font-bold text-xs">Erkek</span>;
@@ -161,9 +154,6 @@ const StudentManagementTab: React.FC = () => {
 
     if (loading) return <div className="text-center py-20 text-slate-400 font-medium animate-pulse">📡 Öğrenci verileri taranıyor...</div>;
 
-    // ===========================================================================
-    // 1. LİSTE GÖRÜNÜMÜ (BANKA TEMASI)
-    // ===========================================================================
     if (viewMode === 'list') {
         return (
             <div className="animate-fade-in-down h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl flex flex-col">
@@ -177,7 +167,6 @@ const StudentManagementTab: React.FC = () => {
                     </button>
                 </div>
 
-                {/* 🎛️ FİLTRE VE ARAMA ÇUBUĞU */}
                 <div className="bg-white p-4 rounded-md shadow-sm border border-slate-200 mb-6 flex flex-col sm:flex-row gap-4 flex-shrink-0">
                     <div className="flex-1 relative">
                         <span className="absolute left-4 top-3 text-slate-400">🔍</span>
@@ -203,7 +192,6 @@ const StudentManagementTab: React.FC = () => {
                     </div>
                 </div>
 
-                {/* 📊 TABLO EKRANI */}
                 <div className="bg-white border border-slate-200 rounded-md shadow-sm flex-1 overflow-hidden flex flex-col">
                     <div className="overflow-x-auto flex-1">
                         <table className="w-full text-left border-collapse">
@@ -262,9 +250,6 @@ const StudentManagementTab: React.FC = () => {
         );
     }
 
-    // ===========================================================================
-    // 2. DETAY GÖRÜNÜMÜ (PROFİL KARTI) - YENİLENDİ
-    // ===========================================================================
     if (viewMode === 'detail' && selectedStudent) {
         return (
             <div className="animate-fade-in-right h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl flex flex-col">
@@ -277,13 +262,12 @@ const StudentManagementTab: React.FC = () => {
 
                 <div className="max-w-4xl mx-auto w-full">
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-
-                        {/* 🚀 PREMIUM HEADER */}
                         <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-8 md:p-10 text-white flex flex-col md:flex-row items-center md:items-start gap-6 relative overflow-hidden">
                             <div className="absolute right-0 top-0 w-64 h-64 bg-blue-500/20 rounded-full blur-[80px]"></div>
 
+                            {/* 🚀 ÇÖKME KORUMASI: Optional chaining ve varsayılan değerler eklendi */}
                             <div className="w-24 h-24 bg-white/10 backdrop-blur-md text-white rounded-2xl flex items-center justify-center text-4xl font-black shadow-inner border border-white/20 relative z-10 shrink-0">
-                                {selectedStudent.firstName.charAt(0)}{selectedStudent.lastName.charAt(0)}
+                                {selectedStudent.firstName?.charAt(0) || ''}{selectedStudent.lastName?.charAt(0) || ''}
                             </div>
                             <div className="relative z-10 text-center md:text-left flex-1">
                                 <h3 className="text-3xl md:text-4xl font-black tracking-tight mb-2">{selectedStudent.firstName} {selectedStudent.lastName}</h3>
@@ -298,7 +282,6 @@ const StudentManagementTab: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Detaylar Kısımı */}
                         <div className="p-8 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-10">
                             <div>
                                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-5 border-b border-slate-100 pb-2">Kişisel Bilgiler</h4>
@@ -330,7 +313,6 @@ const StudentManagementTab: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Aksiyon Butonları */}
                         <div className="p-6 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
                             <button onClick={() => handleDelete(selectedStudent.id, selectedStudent.firstName)} className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-6 py-2.5 rounded-lg font-bold text-sm tracking-widest transition-all shadow-sm">
                                 SİSTEMDEN SİL
@@ -345,9 +327,6 @@ const StudentManagementTab: React.FC = () => {
         );
     }
 
-    // ===========================================================================
-    // 3. AKILLI FORM GÖRÜNÜMÜ
-    // ===========================================================================
     if (viewMode === 'form') {
         return (
             <div className="animate-fade-in-right h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl flex flex-col">
@@ -363,7 +342,6 @@ const StudentManagementTab: React.FC = () => {
                 <div className="max-w-4xl mx-auto w-full bg-white p-8 md:p-10 rounded-md shadow-sm border border-slate-200">
                     <form onSubmit={handleSubmit} className="space-y-8">
 
-                        {/* 1. Aşama */}
                         <section>
                             <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2 mb-6 text-emerald-700">1. Öğrenci Temel Bilgileri</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -399,7 +377,6 @@ const StudentManagementTab: React.FC = () => {
                             </div>
                         </section>
 
-                        {/* 2. Aşama */}
                         <section>
                             <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2 mb-6 text-blue-700">2. Veli Ataması (İsteğe Bağlı)</h3>
                             <div>
@@ -413,8 +390,6 @@ const StudentManagementTab: React.FC = () => {
                             </div>
                         </section>
 
-                        {/* 3. Aşama (Sadece Liseler İçin) */}
-                        {/* 3. Aşama (Sadece Liseler İçin) */}
                         {schoolType === 'HIGH_SCHOOL' && (
                             <section className="animate-fade-in">
                                 <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2 mb-6 text-purple-700">3. Öğrenci Sistem Giriş & İletişim Bilgileri (Lise)</h3>
@@ -427,7 +402,6 @@ const StudentManagementTab: React.FC = () => {
                                         <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">{selectedStudent ? 'Şifre (Değişmeyecekse Boş Bırak)' : 'Sistem Giriş Şifresi *'}</label>
                                         <input required={!selectedStudent} type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-purple-700 outline-none transition-all placeholder:text-slate-400" placeholder="••••••••" />
                                     </div>
-                                    {/* 🚀 YENİ İLETİŞİM ALANLARI */}
                                     <div>
                                         <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Öğrenci Telefon Numarası *</label>
                                         <input required type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-purple-700 outline-none transition-all placeholder:text-slate-400" placeholder="05XX XXX XX XX" />
