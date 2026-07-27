@@ -8,7 +8,9 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
     const token = localStorage.getItem('token');
-    const userRole = localStorage.getItem('userRole');
+
+    // 🚀 KRİTİK DÜZELTME: Eski 'userRole' yerine yeni standart 'role' anahtarını arıyoruz!
+    const userRole = localStorage.getItem('role');
 
     // Eğer bilet (token) yoksa Ana Karşılama Ekranına (Liman) geri gönder
     if (!token) {
