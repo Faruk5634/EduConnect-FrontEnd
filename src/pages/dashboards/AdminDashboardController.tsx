@@ -1,17 +1,17 @@
 import React from 'react';
 import SuperAdminDashboard from './SuperAdminDashboard';
-import AdminPanel from './AdminPanel'; // Senin o ekranda gördüğün eski panel
+import AdminPanel from './AdminPanel';
 
 const AdminDashboardController: React.FC = () => {
-    // Tarayıcı hafızasından rütbeyi çekiyoruz
-    const role = localStorage.getItem('userRole');
+    // 🚀 KRİTİK DÜZELTME: Bir önceki adımda standartlaştırdığımız 'role' anahtarını kullanıyoruz!
+    const role = localStorage.getItem('role');
 
     // Eğer giren kişi Donanma Komutanı (Super Admin) ise yeni karanlık kokpite yönlendir
     if (role === 'ROLE_SUPER_ADMIN') {
         return <SuperAdminDashboard />;
     }
 
-    // Eğer normal Okul Müdürü (Admin) ise şimdilik o gördüğün eski beyaz paneli göster
+    // Eğer normal Okul Müdürü veya Müdür Yardımcısı (Admin/Vice Admin) ise kurum panelini göster
     return <AdminPanel />;
 };
 
