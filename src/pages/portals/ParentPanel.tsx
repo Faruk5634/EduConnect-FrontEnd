@@ -28,8 +28,6 @@ export default function ParentPanel() {
         firstName: '', lastName: '', email: '', phone: '', currentPassword: '', newPassword: ''
     });
 
-    // 🧠 GERİ TUŞU KORUMASI (Akıllı Durum Tahsisi)
-    // Veli panelinde anasayfa 'selection' (Seçim) sekmesidir!
     const isNotHome = viewMode !== 'selection' || parentProfileView !== 'overview';
     const isNotHomeRef = useRef(isNotHome);
 
@@ -105,10 +103,9 @@ export default function ParentPanel() {
             setParentProfileView('overview');
             setParentUpdateForm(prev => ({ ...prev, newPassword: '', currentPassword: '' }));
             await fetchParentProfile();
-        } catch (err) { showToast('Profil güncellenemedi.', 'error'); }
+        } catch (error) { showToast('Profil güncellenemedi.', 'error'); }
     };
 
-    // 🚪 🚀 GÜVENLİ ÇIKIŞ
     const handleLogout = () => {
         localStorage.clear();
         navigate('/', { replace: true });
@@ -121,7 +118,6 @@ export default function ParentPanel() {
     return (
         <div className="font-sans min-h-screen bg-slate-950 flex flex-col overflow-hidden relative selection:bg-purple-500/30 animate-fade-in">
 
-            {/* YÜZEYSEL ÜST BAR */}
             <div className="absolute top-0 left-0 w-full p-6 md:px-12 flex justify-between items-center z-50 pointer-events-none">
                 <div className="flex items-center gap-3 pointer-events-auto cursor-pointer" onClick={() => {setViewMode('selection'); setParentProfileView('overview');}}>
                     <div className="w-12 h-12 bg-purple-700 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-[0_0_20px_rgba(126,34,206,0.4)]">EC</div>
@@ -132,7 +128,6 @@ export default function ParentPanel() {
                 </button>
             </div>
 
-            {/* DURUM 1: ANA SEÇİM EKRANI (50/50 BÖLÜNMÜŞ DEV BUTONLAR) */}
             {viewMode === 'selection' && (
                 <div className="flex-1 flex flex-col md:flex-row h-screen">
                     <div
@@ -164,7 +159,6 @@ export default function ParentPanel() {
                 </div>
             )}
 
-            {/* DURUM 2: ÖĞRENCİ LİSTESİ EKRANI */}
             {viewMode === 'studentsList' && (
                 <div className="flex-1 overflow-y-auto pt-32 px-6 pb-20 relative z-10 bg-slate-900/30">
                     <div className="max-w-4xl mx-auto animate-fade-in-right">
@@ -213,7 +207,6 @@ export default function ParentPanel() {
                 </div>
             )}
 
-            {/* DURUM 3: VELİ PROFİLİ EKRANI */}
             {viewMode === 'parentProfile' && (
                 <div className="flex-1 overflow-y-auto pt-32 px-6 pb-20 relative z-10 bg-slate-950">
                     <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-purple-900/20 blur-[120px] rounded-full pointer-events-none"></div>
@@ -311,7 +304,6 @@ export default function ParentPanel() {
                 </div>
             )}
 
-            {/* 🚨 ÇIKIŞ ONAY PENCERESİ */}
             {showLogoutModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md animate-fade-in">
                     <div className="bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md p-10 border border-slate-700 relative text-center animate-scale-in">

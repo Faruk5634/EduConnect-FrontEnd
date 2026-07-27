@@ -59,7 +59,6 @@ export default function TeacherPanel() {
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-    // 🚀 DUYURU DURUMLARI
     const [myAnnouncements, setMyAnnouncements] = useState<Announcement[]>([]);
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
@@ -255,8 +254,6 @@ export default function TeacherPanel() {
             setSelectedFiles([]);
 
             if (profile) fetchMyAnnouncements(`${profile.firstName} ${profile.lastName}`);
-
-            // 🚀 Yayınladıktan sonra direkt Duyurularım sekmesine at
             setActiveTab('my-announcements');
 
         } catch (error) {
@@ -278,7 +275,8 @@ export default function TeacherPanel() {
         }
     };
 
-    const handleSelectUser = (user: any) => {
+    // 🚀 TİP GÜVENLİĞİ EKLENDİ (any kaldırıldı)
+    const handleSelectUser = (user: {userId: number, fullName: string, role: string}) => {
         setMsgReceiverId(user.userId.toString());
         setSelectedReceiverName(`${user.fullName} (${user.role})`);
         setShowSearchDropdown(false);
@@ -337,7 +335,7 @@ export default function TeacherPanel() {
                 }
                 await api.put('/users/me', { password: updateForm.newPassword, currentPassword: updateForm.currentPassword });
             } else {
-                const payload: any = {
+                const payload: Record<string, string> = {
                     firstName: updateForm.firstName,
                     lastName: updateForm.lastName,
                     email: updateForm.email,
@@ -350,9 +348,8 @@ export default function TeacherPanel() {
             setProfileViewMode('overview');
             setUpdateForm(prev => ({ ...prev, newPassword: '', currentPassword: '' }));
             await fetchInitialData();
-        } catch (err: any) {
-            const serverMsg = err?.response?.data || 'Profil güncellenemedi.';
-            showToast(serverMsg, 'error');
+        } catch (error) {
+            showToast('Profil güncellenemedi.', 'error');
         }
     };
 
@@ -442,7 +439,6 @@ export default function TeacherPanel() {
                             </div>
                         </button>
 
-                        {/* 🚀 GÜNCELLEME: PROFİL AÇILIR MENÜSÜ */}
                         {isDropdownOpen && (
                             <div className="absolute right-0 mt-3 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in-down origin-top-right">
                                 <div className="p-4 bg-slate-50 border-b border-slate-100">
@@ -618,8 +614,6 @@ export default function TeacherPanel() {
 
                     {activeTab === 'my-announcements' && (
                         <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8 animate-fade-in-down">
-
-                            {/* 🚀 GÜNCELLEME: ÜST KISMA YENİ DUYURU BUTONU EKLENDİ */}
                             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 pb-4 border-b border-slate-100">
                                 <div className="flex items-center gap-3">
                                     <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-2xl">🗂️</div>

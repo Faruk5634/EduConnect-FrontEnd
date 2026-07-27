@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { api } from '../../services/api';
+import { api, API_BASE } from '../../services/api'; // 🚀 GÜNCELLEME: API_BASE import edildi
 import { showToast } from '../../utils/toast';
 
 interface StudentProfile {
@@ -53,7 +53,6 @@ export default function StudentPanel() {
     const isParentViewing = location.state?.isParentViewing || false;
     const studentSchoolNumber = location.state?.studentSchoolNumber;
 
-    // 🚀 GÜNCELLEME: Varsayılan sekme artık 'overview' (Anasayfa)
     const [activeTab, setActiveTab] = useState('overview');
     const [profile, setProfile] = useState<StudentProfile | null>(null);
     const [loading, setLoading] = useState(true);
@@ -63,7 +62,6 @@ export default function StudentPanel() {
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
 
-    // 🚀 YENİ EKLENENLER: Duyuru Filtreleme State'leri
     const [announcementSearch, setAnnouncementSearch] = useState('');
     const [announcementTypeFilter, setAnnouncementTypeFilter] = useState('ALL');
     const [announcementSort, setAnnouncementSort] = useState('NEWEST');
@@ -184,7 +182,8 @@ export default function StudentPanel() {
         }
     };
 
-    const handleSelectUser = (user: any) => {
+    // 🚀 TİP GÜVENLİĞİ EKLENDİ (any kaldırıldı)
+    const handleSelectUser = (user: {userId: number, fullName: string, role: string}) => {
         setMsgReceiverId(user.userId.toString());
         setSelectedReceiverName(`${user.fullName} (${user.role})`);
         setShowSearchDropdown(false);
@@ -248,7 +247,7 @@ export default function StudentPanel() {
                 }
                 await api.put('/users/me', { password: updateForm.newPassword, currentPassword: updateForm.currentPassword });
             } else {
-                const payload: any = {
+                const payload: Record<string, string> = {
                     firstName: updateForm.firstName, lastName: updateForm.lastName, email: updateForm.email, phone: updateForm.phone
                 };
                 await api.put('/users/me', payload);
@@ -258,7 +257,7 @@ export default function StudentPanel() {
             setProfileViewMode('overview');
             setUpdateForm(prev => ({ ...prev, newPassword: '', currentPassword: '' }));
             await fetchInitialData();
-        } catch (err: any) {
+        } catch (error) {
             showToast('Profil güncellenemedi.', 'error');
         }
     };
@@ -291,7 +290,6 @@ export default function StudentPanel() {
         }
     };
 
-    // 🚀 DUYURULARI FİLTRELEME VE SIRALAMA MOTORU
     const processedAnnouncements = announcements
         .filter(ann => {
             const matchesSearch = ann.title.toLowerCase().includes(announcementSearch.toLowerCase()) ||
@@ -315,7 +313,6 @@ export default function StudentPanel() {
         <div className="min-h-screen bg-slate-50 text-slate-800 flex font-sans selection:bg-indigo-500/30">
 
             <aside className="w-72 bg-white border-r border-slate-200 flex flex-col shadow-sm z-10 shrink-0">
-                {/* 🚀 BUG FIX: Logoya tıklandığında artık login'e atmaz, panel içindeki anasayfaya geçer */}
                 <div onClick={() => { setActiveTab('overview'); setProfileViewMode('overview'); setSelectedAnnouncement(null); }} className="p-8 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors group">
                     <h1 className="text-3xl font-black text-indigo-600 tracking-tight group-hover:scale-105 transition-transform origin-left">
                         EduConnect
@@ -414,7 +411,6 @@ export default function StudentPanel() {
 
                 <div className="flex-1 overflow-y-auto p-10 bg-slate-50/50">
 
-                    {/* 🚀 YENİ EKLENEN ANASAYFA (OVERVIEW) */}
                     {activeTab === 'overview' && (
                         <div className="max-w-6xl mx-auto space-y-8 animate-fade-in-down">
                             <div className="bg-gradient-to-r from-indigo-600 to-blue-800 rounded-3xl p-10 text-white shadow-lg relative overflow-hidden">
@@ -484,12 +480,13 @@ export default function StudentPanel() {
                                         </div>
                                         <div className="prose max-w-none text-slate-600 font-medium leading-relaxed whitespace-pre-wrap text-lg">{selectedAnnouncement.content}</div>
 
+                                        {/* 🚀 BUG FIX: Hardcoded URL yerine dinamik API_BASE kullanıldı */}
                                         {selectedAnnouncement.attachedFiles && selectedAnnouncement.attachedFiles.length > 0 && (
                                             <div className="mt-12 pt-8 border-t border-slate-100 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
                                                 <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"><span>📎</span> Ekli Dosyalar ({selectedAnnouncement.attachedFiles.length})</h4>
                                                 <div className="flex flex-wrap gap-4">
                                                     {selectedAnnouncement.attachedFiles.map((file, idx) => (
-                                                        <a key={idx} href={`http://localhost:8080${file.fileUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-white hover:bg-indigo-50 text-indigo-700 px-6 py-4 rounded-xl text-sm font-bold transition-all shadow-sm border border-slate-200 hover:border-indigo-200 hover:shadow-md">
+                                                        <a key={idx} href={`${API_BASE}${file.fileUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-white hover:bg-indigo-50 text-indigo-700 px-6 py-4 rounded-xl text-sm font-bold transition-all shadow-sm border border-slate-200 hover:border-indigo-200 hover:shadow-md">
                                                             <span className="text-2xl text-indigo-500 flex-shrink-0">📄</span>
                                                             <span className="truncate max-w-[200px]" title={file.fileName}>{file.fileName || 'Dosyayı İndir'}</span>
                                                             <span className="text-slate-400 flex-shrink-0">⬇</span>
@@ -504,7 +501,6 @@ export default function StudentPanel() {
                                 <div className="flex flex-col-reverse lg:flex-row gap-8">
                                     <div className="flex-[2] space-y-6">
 
-                                        {/* 🚀 GÜNCELLEME: FİLTRE VE ARAMA ÇUBUĞU */}
                                         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 mb-8">
                                             <div className="flex-1 relative">
                                                 <span className="absolute left-4 top-3 text-slate-400">🔍</span>
