@@ -122,30 +122,21 @@ const AdminManagementTab: React.FC = () => {
         const schoolName = (admin.schoolName || '').toLowerCase();
         const searchLower = searchTerm.toLowerCase();
 
-        // 1. Arama Çubuğu Eşleşmesi (İsim veya Okul)
         const matchesSearch = fullName.includes(searchLower) || schoolName.includes(searchLower);
-
-        // 2. Rütbe Eşleşmesi
         const matchesRole = roleFilter === 'ALL' || admin.role === roleFilter;
-
-        // 3. Okul Eşleşmesi
         const matchesSchool = schoolFilter === 'ALL' ||
             (schoolFilter === 'UNASSIGNED' && admin.schoolName === 'Boşta') ||
             admin.schoolId?.toString() === schoolFilter;
 
         return matchesSearch && matchesRole && matchesSchool;
     }).sort((a, b) => {
-        // 4. Sıralama (A-Z veya Z-A)
         if (sortOrder === 'AZ') return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
         if (sortOrder === 'ZA') return `${b.firstName} ${b.lastName}`.localeCompare(`${a.firstName} ${a.lastName}`);
-        return 0; // DEFAULT
+        return 0;
     });
 
     if (loading) return <div className="text-center py-20 text-slate-400 font-medium animate-pulse">📡 Yönetici verileri taranıyor...</div>;
 
-    // ===========================================================================
-    // 1. GÖRÜNÜM: LİSTE VE FİLTRELEME EKRANI
-    // ===========================================================================
     if (viewMode === 'list') {
         return (
             <div className="animate-fade-in-down h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl">
@@ -159,7 +150,6 @@ const AdminManagementTab: React.FC = () => {
                     </button>
                 </div>
 
-                {/* 🎛️ FİLTRE VE ARAMA ÇUBUĞU (Banka Teması) */}
                 <div className="bg-white p-4 rounded-md shadow-sm border border-slate-200 mb-6 flex flex-col lg:flex-row gap-4">
                     <div className="flex-1">
                         <input type="text" placeholder="İsim, Soyisim veya Kurum Adı Ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" />
@@ -187,7 +177,6 @@ const AdminManagementTab: React.FC = () => {
                     </div>
                 </div>
 
-                {/* 📊 TABLO EKRANI */}
                 <div className="bg-white border border-slate-200 rounded-md shadow-sm overflow-hidden">
                     <table className="w-full text-left border-collapse">
                         <thead>
@@ -214,9 +203,9 @@ const AdminManagementTab: React.FC = () => {
                                         {admin.email ? admin.email : <span className="text-slate-400 italic">Belirtilmemiş</span>}
                                     </td>
                                     <td className="p-5">
-                      <span className={`px-2 py-1 rounded text-[10px] font-black uppercase border tracking-widest ${admin.role === 'ROLE_ADMIN' ? 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/20' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
-                        {admin.role === 'ROLE_ADMIN' ? 'MÜDÜR' : 'MÜDÜR YRD.'}
-                      </span>
+                                      <span className={`px-2 py-1 rounded text-[10px] font-black uppercase border tracking-widest ${admin.role === 'ROLE_ADMIN' ? 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/20' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                                        {admin.role === 'ROLE_ADMIN' ? 'MÜDÜR' : 'MÜDÜR YRD.'}
+                                      </span>
                                     </td>
                                     <td className="p-5 font-medium text-sm">
                                         {admin.schoolName === 'Boşta' ? (
@@ -233,13 +222,9 @@ const AdminManagementTab: React.FC = () => {
         );
     }
 
-    // ===========================================================================
-    // 2. GÖRÜNÜM: DETAY & FORM EKRANI
-    // ===========================================================================
     return (
         <div className="animate-fade-in-right h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl">
 
-            {/* Üst Bar */}
             <div className="flex items-center gap-4 mb-8 pb-4 border-b border-slate-200">
                 <button onClick={goToList} className="text-slate-500 hover:text-slate-900 bg-white border border-slate-300 p-2 rounded-md transition-all shadow-sm font-bold px-4 text-sm tracking-widest">
                     GERİ DÖN
@@ -251,27 +236,25 @@ const AdminManagementTab: React.FC = () => {
                 </div>
             </div>
 
-            {/* 2.A - SADECE DETAY GÖRÜNÜMÜ */}
             {viewMode === 'detail' && selectedAdmin && (
                 <div className="max-w-4xl mx-auto">
                     <div className="bg-white rounded-md shadow-sm border border-slate-200 overflow-hidden">
 
-                        {/* Profil Üst Kısım - Lacivert Arka Plan */}
                         <div className="bg-[#1e293b] p-8 text-white flex items-center gap-6">
+                            {/* 🚀 ÇÖKME KORUMASI: Optional Chaining Eklendi */}
                             <div className="w-20 h-20 bg-slate-700/50 text-white rounded-md flex items-center justify-center text-3xl font-black shadow-inner border border-slate-600">
-                                {selectedAdmin.firstName.charAt(0)}{selectedAdmin.lastName.charAt(0)}
+                                {selectedAdmin.firstName?.charAt(0) || ''}{selectedAdmin.lastName?.charAt(0) || ''}
                             </div>
                             <div>
                                 <h3 className="text-3xl font-black">{selectedAdmin.firstName} {selectedAdmin.lastName}</h3>
                                 <div className="mt-3 inline-block">
-                  <span className={`px-3 py-1 rounded text-xs font-bold tracking-widest uppercase ${selectedAdmin.role === 'ROLE_ADMIN' ? 'bg-[#10b981] text-white' : 'bg-blue-600 text-white'}`}>
-                    {selectedAdmin.role === 'ROLE_ADMIN' ? 'OKUL MÜDÜRÜ' : 'MÜDÜR YARDIMCISI'}
-                  </span>
+                                  <span className={`px-3 py-1 rounded text-xs font-bold tracking-widest uppercase ${selectedAdmin.role === 'ROLE_ADMIN' ? 'bg-[#10b981] text-white' : 'bg-blue-600 text-white'}`}>
+                                    {selectedAdmin.role === 'ROLE_ADMIN' ? 'OKUL MÜDÜRÜ' : 'MÜDÜR YARDIMCISI'}
+                                  </span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Detaylar Kısımı */}
                         <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div>
                                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">İletişim & Lokasyon</h4>
@@ -307,7 +290,6 @@ const AdminManagementTab: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Aksiyon Butonları */}
                         <div className="p-6 bg-white border-t border-slate-200 flex justify-end gap-3">
                             <button onClick={() => handleDelete(selectedAdmin.id)} className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-6 py-2.5 rounded-md font-bold text-sm tracking-widest transition-all">
                                 SİSTEMDEN SİL
@@ -320,7 +302,6 @@ const AdminManagementTab: React.FC = () => {
                 </div>
             )}
 
-            {/* 2.B - FORM GÖRÜNÜMÜ (Yeni Kayıt veya Düzenleme) */}
             {(viewMode === 'create' || viewMode === 'edit') && (
                 <div className="max-w-3xl mx-auto bg-white p-8 md:p-10 rounded-md shadow-sm border border-slate-200">
                     <form onSubmit={viewMode === 'create' ? handleCreateSubmit : handleUpdateSubmit} className="space-y-6">
