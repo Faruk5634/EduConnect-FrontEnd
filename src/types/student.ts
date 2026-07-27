@@ -3,10 +3,13 @@ export interface Student {
     firstName: string;
     lastName: string;
     schoolNumber: string;
-    parentFullName: string; // 🚀 YENİ: Java'dan gelen tam isim
-    parentId?: number; // Düzenleme işlemi için (buna birazdan değineceğiz)
-
-    // 🚀 BACKEND UYUMU: Makine dairesinden gelen yeni alanlar eklendi
+    parentFullName: string;
+    parentId?: number;
     username?: string;
     grade?: string;
+
+    // 🚀 BACKEND UYUMU: Makine dairesinden gelen yepyeni alanlar
+    gender?: string;
+    phone?: string;
+    email?: string;
 }
