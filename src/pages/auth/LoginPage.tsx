@@ -46,7 +46,7 @@ const LoginPage: React.FC = () => {
             localStorage.setItem('role', role);
             localStorage.setItem('username', resUsername);
 
-            console.log(`Kaptan, ${role} olarak giriş başarılı!`);
+            console.log(`Login successful for role ${role}`);
 
             if (role === 'ROLE_TEACHER') {
                 navigate('/teacher');
@@ -60,7 +60,7 @@ const LoginPage: React.FC = () => {
 
         } catch (err) { // 🚀 'any' kirliliği temizlendi
             console.error("Giriş sızıntısı:", err);
-            setError('Giriş başarısız! Bilgilerini kontrol et Kaptan.');
+            setError('Giriş başarısız! Lütfen kullanıcı adı ve şifrenizi kontrol ediniz.');
         }
     };
 

@@ -30,7 +30,7 @@ const AdminLoginPage: React.FC = () => {
                 localStorage.setItem('role', role);
                 localStorage.setItem('username', resUsername);
 
-                console.log(`Kaptan, ${role} yetkisiyle giriş başarılı!`);
+                console.log(`Login successful for role ${role}`);
                 navigate('/admin');
 
             } else {

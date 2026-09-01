@@ -108,7 +108,7 @@ const ClassroomTab: React.FC = () => {
 
         const isDuplicate = classrooms.some(c => c.name === generatedClassName && c.id !== selectedClass?.id);
         if (isDuplicate) {
-            showToast(`Kaptan, ${generatedClassName} sınıfı sistemde zaten mevcut! Lütfen farklı bir şube seçiniz.`, 'error');
+            showToast(`${generatedClassName} sınıfı zaten kayıtlıdır. Lütfen farklı bir şube seçiniz.`, 'error');
              return;
         }
 
