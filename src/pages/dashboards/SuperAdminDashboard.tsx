@@ -1,3 +1,4 @@
+import { Mail, Building2, Users, Settings, LogOut } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
@@ -103,7 +104,7 @@ const SuperAdminDashboard: React.FC = () => {
 
             <aside className="w-72 bg-slate-900 border-r border-slate-800 flex flex-col shadow-2xl z-10">
                 <div className="p-8 border-b border-slate-800/60">
-                    <h1 onClick={() => setActiveTab('overview')} className="text-3xl cursor-pointer font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500 tracking-tight">
+                    <h1 onClick={() => setActiveTab('overview')} className="text-3xl cursor-pointer font-bold tracking-tight text-slate-800 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500 tracking-tight">
                         EduConnect
                     </h1>
                 </div>
@@ -114,15 +115,15 @@ const SuperAdminDashboard: React.FC = () => {
                         <span className="font-semibold tracking-wide">Ana Sayfa</span>
                     </button>
                     <button onClick={() => setActiveTab('campuses')} className={getTabClass('campuses')}>
-                        <span className="text-xl group-hover:scale-110 transition-transform">🏛️</span>
+                        <span className="text-xl group-hover:scale-110 transition-transform"><Building2 className="w-6 h-6" /></span>
                         <span className="font-medium tracking-wide">Kurum Yönetimi</span>
                     </button>
                     <button onClick={() => setActiveTab('admins')} className={getTabClass('admins')}>
-                        <span className="text-xl group-hover:scale-110 transition-transform">👨‍💼</span>
+                        <span className="text-xl group-hover:scale-110 transition-transform"><Users className="w-6 h-6" /></span>
                         <span className="font-medium tracking-wide">Yönetici Merkezi</span>
                     </button>
                     <button onClick={() => setActiveTab('logs')} className={getTabClass('logs')}>
-                        <span className="text-xl group-hover:scale-110 transition-transform">⚙️</span>
+                        <span className="text-xl group-hover:scale-110 transition-transform"><Settings className="w-6 h-6" /></span>
                         <span className="font-medium tracking-wide">Sistem Logları</span>
                     </button>
 
@@ -134,14 +135,14 @@ const SuperAdminDashboard: React.FC = () => {
                     </div>
 
                     <button onClick={() => setActiveTab('messages')} className={getTabClass('messages')}>
-                        <span className="text-xl group-hover:scale-110 transition-transform">✉️</span>
+                        <span className="text-xl group-hover:scale-110 transition-transform"><Mail className="w-6 h-6" /></span>
                         <span className="font-medium tracking-wide">İletişim & Destek</span>
                     </button>
                 </nav>
 
                 <div className="p-4 border-t border-slate-800/60">
                     <button onClick={() => setShowLogoutModal(true)} className="w-full flex items-center justify-center space-x-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-3 rounded-xl transition-colors border border-transparent hover:border-red-500/30">
-                        <span>🚪</span>
+                        <span><LogOut className="w-6 h-6" /></span>
                         <span className="font-semibold">Güvenli Çıkış</span>
                     </button>
                 </div>
@@ -155,7 +156,7 @@ const SuperAdminDashboard: React.FC = () => {
                         {isDropdownOpen && <div className="fixed inset-0 z-20" onClick={() => setIsDropdownOpen(false)}></div>}
                         <div className="relative z-30">
                             <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className={`flex items-center gap-3 bg-slate-900/60 backdrop-blur-md border px-2 py-2 pr-5 rounded-full hover:bg-slate-800 transition-all shadow-lg group ${isDropdownOpen ? 'border-blue-500/50' : 'border-slate-700/50'}`}>
-                                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black shadow-inner tracking-tighter">
+                                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold tracking-tight text-slate-800 shadow-inner tracking-tighter">
                                     {getInitials(headerProfileName)}
                                 </div>
                                 <div className="text-left hidden md:block">
@@ -175,12 +176,12 @@ const SuperAdminDashboard: React.FC = () => {
                                             <span>👤</span> Profili Görüntüle
                                         </button>
                                         <button onClick={() => { setIsDropdownOpen(false); setActiveTab('messages'); }} className="w-full text-left px-5 py-2.5 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 transition-colors flex items-center gap-3">
-                                            <span>✉️</span> İletişim & Destek
+                                            <span><Mail className="w-6 h-6" /></span> İletişim & Destek
                                         </button>
                                     </div>
                                     <div className="py-2 border-t border-slate-700/50">
                                         <button onClick={() => { setIsDropdownOpen(false); setShowLogoutModal(true); }} className="w-full text-left px-5 py-2.5 text-sm font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors flex items-center gap-3">
-                                            <span>🚪</span> Sistemden Çıkış
+                                            <span><LogOut className="w-6 h-6" /></span> Sistemden Çıkış
                                         </button>
                                     </div>
                                 </div>
@@ -199,30 +200,30 @@ const SuperAdminDashboard: React.FC = () => {
                         </header>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-                            <div onClick={() => setActiveTab('campuses')} className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 p-7 rounded-3xl shadow-xl hover:-translate-y-1 transition-transform duration-300 group cursor-pointer">
+                            <div onClick={() => setActiveTab('campuses')} className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 p-7 rounded-2xl shadow-xl hover:-translate-y-1 transition-transform duration-300 group cursor-pointer">
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <p className="text-slate-400 text-sm font-semibold tracking-wide uppercase mb-2">Kayıtlı Kampüs</p>
-                                        <h3 className="text-5xl font-black text-white">{loadingStats ? <span className="animate-pulse text-slate-600">...</span> : stats.campuses}</h3>
+                                        <h3 className="text-5xl font-bold tracking-tight text-slate-800 text-white">{loadingStats ? <span className="animate-pulse text-slate-600">...</span> : stats.campuses}</h3>
                                     </div>
-                                    <div className="text-4xl group-hover:scale-110 transition-transform">🏛️</div>
+                                    <div className="text-4xl group-hover:scale-110 transition-transform"><Building2 className="w-6 h-6" /></div>
                                 </div>
                             </div>
-                            <div onClick={() => setActiveTab('admins')} className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 p-7 rounded-3xl shadow-xl hover:-translate-y-1 transition-transform duration-300 group cursor-pointer">
+                            <div onClick={() => setActiveTab('admins')} className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 p-7 rounded-2xl shadow-xl hover:-translate-y-1 transition-transform duration-300 group cursor-pointer">
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <p className="text-slate-400 text-sm font-semibold tracking-wide uppercase mb-2">Aktif Yönetici</p>
-                                        <h3 className="text-5xl font-black text-white">{loadingStats ? <span className="animate-pulse text-slate-600">...</span> : stats.admins}</h3>
+                                        <h3 className="text-5xl font-bold tracking-tight text-slate-800 text-white">{loadingStats ? <span className="animate-pulse text-slate-600">...</span> : stats.admins}</h3>
                                     </div>
-                                    <div className="text-4xl group-hover:scale-110 transition-transform">👨‍💼</div>
+                                    <div className="text-4xl group-hover:scale-110 transition-transform"><Users className="w-6 h-6" /></div>
                                 </div>
                             </div>
-                            <div onClick={() => setActiveTab('admins')} className="bg-slate-900/80 backdrop-blur-sm border border-blue-500/30 p-7 rounded-3xl shadow-[0_0_30px_rgba(59,130,246,0.1)] hover:-translate-y-1 transition-transform duration-300 group relative overflow-hidden cursor-pointer">
+                            <div onClick={() => setActiveTab('admins')} className="bg-slate-900/80 backdrop-blur-sm border border-blue-500/30 p-7 rounded-2xl shadow-[0_0_30px_rgba(59,130,246,0.1)] hover:-translate-y-1 transition-transform duration-300 group relative overflow-hidden cursor-pointer">
                                 <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/20 rounded-full blur-2xl group-hover:bg-blue-500/30 transition-colors"></div>
                                 <div className="flex justify-between items-start relative z-10">
                                     <div>
                                         <p className="text-blue-300 text-sm font-semibold tracking-wide uppercase mb-2">Kayıtlı Kullanıcı</p>
-                                        <h3 className="text-5xl font-black text-white">{loadingStats ? <span className="animate-pulse text-blue-800">...</span> : stats.totalUsers}</h3>
+                                        <h3 className="text-5xl font-bold tracking-tight text-slate-800 text-white">{loadingStats ? <span className="animate-pulse text-blue-800">...</span> : stats.totalUsers}</h3>
                                     </div>
                                     <div className="text-4xl group-hover:scale-110 transition-transform">🌐</div>
                                 </div>
@@ -244,7 +245,7 @@ const SuperAdminDashboard: React.FC = () => {
 
             {showLogoutModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white rounded-md shadow-2xl w-full max-w-md p-6 border border-slate-200 relative animate-scale-in">
+                    <div className="glass-panel rounded-md shadow-2xl w-full max-w-md p-6 border border-white/40 relative animate-scale-in">
                         <div className="flex items-start gap-5 mb-6">
                             <div className="w-12 h-12 rounded-full bg-red-50 border border-red-100 flex items-center justify-center flex-shrink-0">
                                 <svg className="w-6 h-6 text-red-600 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -257,8 +258,8 @@ const SuperAdminDashboard: React.FC = () => {
                             </div>
                         </div>
                         <div className="flex justify-end gap-3 pt-5 border-t border-slate-100">
-                            <button onClick={() => setShowLogoutModal(false)} className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-6 py-2.5 rounded-md font-bold text-sm tracking-widest transition-all shadow-sm">İPTAL</button>
-                            <button onClick={handleLogoutConfirm} className="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-md font-bold text-sm tracking-widest shadow-md transition-all">ÇIKIŞ YAP</button>
+                            <button onClick={() => setShowLogoutModal(false)} className="glass-panel border border-slate-300 hover:bg-transparent text-slate-700 px-6 py-2.5 rounded-md font-bold text-sm tracking-widest transition-all shadow-lg">İPTAL</button>
+                            <button onClick={handleLogoutConfirm} className="btn-danger px-6 py-2.5 rounded-md font-bold text-sm tracking-widest shadow-lg transition-all">ÇIKIŞ YAP</button>
                         </div>
                     </div>
                 </div>

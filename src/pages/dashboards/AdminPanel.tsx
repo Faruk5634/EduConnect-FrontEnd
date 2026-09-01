@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Megaphone, MessageSquare, UserCircle, LogOut, ArrowLeft, GraduationCap, BarChart3, Users, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import StudentManagementTab from '../../components/school-admin/StudentManagementTab';
 import ClassroomTab from '../../components/school-admin/ClassroomTab';
@@ -64,7 +65,7 @@ const AdminPanel: React.FC = () => {
 
             <AdminSidebar activeTab={activeTab} onSelect={setActiveTab} onLogout={() => setShowLogoutModal(true)} onHome={() => setActiveTab('overview')} />
 
-            <main className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
+            <main className="flex-1 flex flex-col h-screen overflow-hidden bg-transparent">
 
                 <AdminHeader
                     schoolName={profileData.schoolName}
@@ -86,7 +87,7 @@ const AdminPanel: React.FC = () => {
                             <div className="animate-fade-in-down max-w-6xl mx-auto">
                                 <div className="mb-8">
                                     <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                                        <span>📊</span> Sistem Özeti
+                                        <BarChart3 className="w-10 h-10" /> Sistem Özeti
                                     </h3>
                                     <p className="text-slate-500 text-sm font-medium mt-1">Kurumunuza ait güncel istatistikler ve anlık durum raporu.</p>
                                 </div>
@@ -104,7 +105,7 @@ const AdminPanel: React.FC = () => {
                         {activeTab === 'messages' && <div className="h-full"><ContactTab /></div>}
                     </div>
 
-                    <footer className="mt-12 pt-6 border-t border-slate-200 text-center text-slate-400 text-sm font-medium">
+                    <footer className="mt-12 pt-6 border-t border-white/40 text-center text-slate-400 text-sm font-medium">
                         © 2026 EduConnect Kurum Yönetim Sistemi. Tüm hakları saklıdır.
                     </footer>
                 </div>

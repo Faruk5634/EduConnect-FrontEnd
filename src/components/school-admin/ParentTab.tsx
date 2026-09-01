@@ -99,13 +99,13 @@ const ParentTab: React.FC = () => {
                     <h2 className="text-2xl font-extrabold text-slate-800">Veli Yönetimi</h2>
                     <button onClick={openCreateForm} className="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-bold">➕ YENİ VELİ EKLE</button>
                 </div>
-                <div className="bg-white p-4 rounded-xl shadow-sm border mb-6">
-                    <input type="text" placeholder="🔍 Veli ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-slate-50 border rounded-lg px-4 py-2.5 outline-none" />
+                <div className="glass-panel p-4 rounded-xl shadow-lg border mb-6">
+                    <input type="text" placeholder="🔍 Veli ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-transparent border rounded-lg px-4 py-2.5 outline-none" />
                 </div>
-                <div className="bg-white border rounded-xl shadow-sm flex-1 overflow-auto">
+                <div className="glass-panel border rounded-xl shadow-lg flex-1 overflow-auto">
                     {loading ? <div className="p-10 text-center text-slate-400">Yükleniyor...</div> : (
                         <table className="w-full text-left">
-                            <thead className="bg-slate-50 border-b">
+                            <thead className="bg-transparent border-b">
                             <tr className="text-slate-500 text-xs uppercase font-bold">
                                 <th className="p-4">Ad Soyad</th>
                                 <th className="p-4">Telefon</th>
@@ -117,7 +117,7 @@ const ParentTab: React.FC = () => {
                             {filteredParents.map((parent) => (
                                 <tr
                                     key={parent.id}
-                                    className="hover:bg-slate-50 cursor-pointer transition-colors"
+                                    className="hover:bg-transparent cursor-pointer transition-colors"
                                     onClick={() => { setSelectedParent(parent); setViewMode('detail'); }}
                                 >
                                     <td className="p-4 font-bold text-slate-800">{parent.firstName} {parent.lastName}</td>
@@ -154,24 +154,24 @@ const ParentTab: React.FC = () => {
     if (viewMode === 'detail' && selectedParent) {
         return (
             <div className="animate-fade-in-right h-full flex flex-col">
-                <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-200">
-                    <button onClick={goToList} className="text-slate-500 hover:text-slate-900 bg-white border border-slate-300 px-4 py-2 rounded-lg transition-all shadow-sm font-bold text-sm tracking-wider">
+                <div className="flex items-center gap-4 mb-6 pb-4 border-b border-white/40">
+                    <button onClick={goToList} className="text-slate-500 hover:text-slate-900 glass-panel border border-slate-300 px-4 py-2 rounded-lg transition-all shadow-lg font-bold text-sm tracking-wider">
                         ⬅️ GERİ DÖN
                     </button>
-                    <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Veli Profili</h2>
+                    <h2 className="text-2xl font-bold tracking-tight text-slate-800 text-slate-800 tracking-tight uppercase">Veli Profili</h2>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6 max-w-4xl mx-auto w-full">
+                <div className="glass-panel rounded-2xl shadow-lg border border-white/40 overflow-hidden mb-6 max-w-4xl mx-auto w-full">
 
                     <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-8 md:p-10 text-white flex flex-col md:flex-row items-center md:items-start gap-6 relative overflow-hidden">
                         <div className="absolute right-0 top-0 w-64 h-64 bg-purple-500/20 rounded-full blur-[80px]"></div>
 
                         {/* 🚀 ÇÖKME KORUMASI: Optional chaining ve varsayılan değerler eklendi */}
-                        <div className="w-24 h-24 bg-white/10 backdrop-blur-md text-white rounded-2xl flex items-center justify-center text-4xl font-black shadow-inner border border-white/20 relative z-10 shrink-0">
+                        <div className="w-24 h-24 glass-panel/10 backdrop-blur-md text-white rounded-2xl flex items-center justify-center text-4xl font-bold tracking-tight text-slate-800 shadow-inner border border-white/20 relative z-10 shrink-0">
                             {selectedParent.firstName?.charAt(0) || ''}{selectedParent.lastName?.charAt(0) || ''}
                         </div>
                         <div className="relative z-10 text-center md:text-left flex-1">
-                            <h3 className="text-3xl md:text-4xl font-black tracking-tight mb-2">{selectedParent.firstName} {selectedParent.lastName}</h3>
+                            <h3 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-800 tracking-tight mb-2">{selectedParent.firstName} {selectedParent.lastName}</h3>
                             <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-3">
                                 <span className="px-3 py-1 rounded-md text-xs font-bold tracking-widest uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">
                                     VELİ PROFİLİ
@@ -207,9 +207,9 @@ const ParentTab: React.FC = () => {
                                     selectedParent.studentNames.map((studentStr, index) => {
                                         const [fullName, stuNo] = studentStr.includes('|') ? studentStr.split('|') : [studentStr, 'Belirtilmemiş'];
                                         return (
-                                            <div key={index} className="bg-slate-50 border border-slate-200 p-3 rounded-lg flex items-center justify-between">
+                                            <div key={index} className="bg-transparent border border-white/40 p-3 rounded-lg flex items-center justify-between">
                                                 <span className="font-bold text-slate-800">{fullName}</span>
-                                                <span className="bg-white border border-slate-200 text-slate-500 text-xs px-2 py-1 rounded font-bold">
+                                                <span className="glass-panel border border-white/40 text-slate-500 text-xs px-2 py-1 rounded font-bold">
                                                     NO: {stuNo}
                                                 </span>
                                             </div>
@@ -224,11 +224,11 @@ const ParentTab: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="p-6 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
-                        <button onClick={() => handleDelete(selectedParent.id)} className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-6 py-2.5 rounded-lg font-bold text-sm tracking-widest transition-all shadow-sm">
+                    <div className="p-6 bg-transparent border-t border-white/40 flex justify-end gap-3">
+                        <button onClick={() => handleDelete(selectedParent.id)} className="glass-panel border border-red-200 text-red-600 hover:bg-red-50 px-6 py-2.5 rounded-lg font-bold text-sm tracking-widest transition-all shadow-lg">
                             SİSTEMDEN SİL
                         </button>
-                        <button onClick={() => openEditForm(selectedParent)} className="bg-slate-900 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg font-bold text-sm tracking-widest shadow-md transition-all">
+                        <button onClick={() => openEditForm(selectedParent)} className="bg-slate-900 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg font-bold text-sm tracking-widest shadow-lg transition-all">
                             BİLGİLERİ DÜZENLE
                         </button>
                     </div>
@@ -240,9 +240,9 @@ const ParentTab: React.FC = () => {
     if (viewMode === 'form') {
         return (
             <div className="animate-fade-in-right h-full">
-                <button onClick={goToList} className="mb-4 text-sm font-bold bg-white border px-4 py-2 rounded-lg">⬅️ İPTAL</button>
-                <div className="bg-white rounded-xl shadow-sm border p-8">
-                    <h2 className="text-2xl font-black mb-6">{selectedParent ? 'Veli Güncelle' : 'Yeni Veli Kaydı'}</h2>
+                <button onClick={goToList} className="mb-4 text-sm font-bold glass-panel border px-4 py-2 rounded-lg">⬅️ İPTAL</button>
+                <div className="glass-panel rounded-xl shadow-lg border p-8">
+                    <h2 className="text-2xl font-bold tracking-tight text-slate-800 mb-6">{selectedParent ? 'Veli Güncelle' : 'Yeni Veli Kaydı'}</h2>
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="grid grid-cols-2 gap-4">
                             <div><label className="block text-sm font-bold mb-1">Ad *</label><input required value={parentForm.firstName} onChange={e => setParentForm({...parentForm, firstName: e.target.value})} className="w-full border rounded-lg px-4 py-2" /></div>

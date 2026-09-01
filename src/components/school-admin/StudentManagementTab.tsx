@@ -149,25 +149,25 @@ const StudentManagementTab: React.FC = () => {
     const getGenderBadge = (gender?: string) => {
         if (gender === 'Kız') return <span className="bg-pink-50 text-pink-600 border border-pink-200 px-2.5 py-1 rounded-md font-bold text-xs">Kız</span>;
         if (gender === 'Erkek') return <span className="bg-blue-50 text-blue-600 border border-blue-200 px-2.5 py-1 rounded-md font-bold text-xs">Erkek</span>;
-        return <span className="bg-slate-100 text-slate-500 border border-slate-200 px-2.5 py-1 rounded-md font-bold text-xs">Belirtilmemiş</span>;
+        return <span className="bg-slate-100 text-slate-500 border border-white/40 px-2.5 py-1 rounded-md font-bold text-xs">Belirtilmemiş</span>;
     };
 
     if (loading) return <div className="text-center py-20 text-slate-400 font-medium animate-pulse">📡 Öğrenci verileri taranıyor...</div>;
 
     if (viewMode === 'list') {
         return (
-            <div className="animate-fade-in-down h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl flex flex-col">
+            <div className="animate-fade-in-down h-full bg-transparent p-6 md:p-8 rounded-tl-3xl flex flex-col">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <div>
                         <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">Öğrenci Yönetimi</h2>
                         <p className="text-slate-500 text-sm mt-1">Sistemdeki tüm öğrencileri ve sınıflarını buradan yönetebilirsiniz.</p>
                     </div>
-                    <button onClick={openCreateForm} className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md font-bold shadow-md transition-all flex items-center gap-2 text-sm tracking-widest flex-shrink-0">
+                    <button onClick={openCreateForm} className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md font-bold shadow-lg transition-all flex items-center gap-2 text-sm tracking-widest flex-shrink-0">
                         <span>➕</span> YENİ ÖĞRENCİ EKLE
                     </button>
                 </div>
 
-                <div className="bg-white p-4 rounded-md shadow-sm border border-slate-200 mb-6 flex flex-col sm:flex-row gap-4 flex-shrink-0">
+                <div className="glass-panel p-4 rounded-md shadow-lg border border-white/40 mb-6 flex flex-col sm:flex-row gap-4 flex-shrink-0">
                     <div className="flex-1 relative">
                         <span className="absolute left-4 top-3 text-slate-400">🔍</span>
                         <input
@@ -175,14 +175,14 @@ const StudentManagementTab: React.FC = () => {
                             placeholder="Öğrenci adı, soyadı veya numarası ara..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-md pl-11 pr-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400"
+                            className="w-full bg-transparent border border-white/40 rounded-md pl-11 pr-4 py-2.5 text-sm font-semibold focus:glass-panel focus:border-blue-700 outline-none transition-all placeholder:text-slate-400"
                         />
                     </div>
                     <div className="w-full sm:w-48">
                         <select
                             value={classFilter}
                             onChange={(e) => setClassFilter(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700"
+                            className="w-full bg-transparent border border-white/40 rounded-md px-4 py-2.5 text-sm font-semibold focus:glass-panel focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700"
                         >
                             <option value="ALL">Tüm Sınıflar</option>
                             {classrooms.map(c => (
@@ -192,11 +192,11 @@ const StudentManagementTab: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="bg-white border border-slate-200 rounded-md shadow-sm flex-1 overflow-hidden flex flex-col">
+                <div className="glass-panel border border-white/40 rounded-md shadow-lg flex-1 overflow-hidden flex flex-col">
                     <div className="overflow-x-auto flex-1">
                         <table className="w-full text-left border-collapse">
-                            <thead className="sticky top-0 bg-slate-50 z-10">
-                            <tr className="border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider font-bold">
+                            <thead className="sticky top-0 bg-transparent z-10">
+                            <tr className="border-b border-white/40 text-slate-500 text-xs uppercase tracking-wider font-bold">
                                 <th className="p-5 pl-6 whitespace-nowrap">Okul No</th>
                                 <th className="p-5 whitespace-nowrap">Öğrenci Adı Soyadı</th>
                                 <th className="p-5 whitespace-nowrap">Sınıf</th>
@@ -212,7 +212,7 @@ const StudentManagementTab: React.FC = () => {
                             ) : (
                                 filteredStudents.map((student) => (
                                     <tr key={student.id} onClick={() => handleViewDetail(student)} className="hover:bg-blue-50/50 transition-colors cursor-pointer group">
-                                        <td className="p-5 pl-6 text-sm font-black text-slate-700 w-24">
+                                        <td className="p-5 pl-6 text-sm font-bold tracking-tight text-slate-800 text-slate-700 w-24">
                                             {student.schoolNumber}
                                         </td>
                                         <td className="p-5">
@@ -232,10 +232,10 @@ const StudentManagementTab: React.FC = () => {
                                             {getGenderBadge(student.gender)}
                                         </td>
                                         <td className="p-5 pr-6 text-right flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                                            <button onClick={() => handleViewDetail(student)} className="bg-white border border-slate-200 text-slate-600 hover:text-blue-700 hover:bg-blue-50 hover:border-blue-200 px-3 py-1.5 rounded-md font-bold text-xs transition-all shadow-sm">
+                                            <button onClick={() => handleViewDetail(student)} className="glass-panel border border-white/40 text-slate-600 hover:text-blue-700 hover:bg-blue-50 hover:border-blue-200 px-3 py-1.5 rounded-md font-bold text-xs transition-all shadow-lg">
                                                 DETAY
                                             </button>
-                                            <button onClick={() => handleDelete(student.id, student.firstName)} className="bg-white border border-slate-200 text-red-500 hover:bg-red-50 hover:border-red-200 px-3 py-1.5 rounded-md font-bold text-xs transition-all shadow-sm">
+                                            <button onClick={() => handleDelete(student.id, student.firstName)} className="glass-panel border border-white/40 text-red-500 hover:bg-red-50 hover:border-red-200 px-3 py-1.5 rounded-md font-bold text-xs transition-all shadow-lg">
                                                 SİL
                                             </button>
                                         </td>
@@ -252,25 +252,25 @@ const StudentManagementTab: React.FC = () => {
 
     if (viewMode === 'detail' && selectedStudent) {
         return (
-            <div className="animate-fade-in-right h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl flex flex-col">
-                <div className="flex items-center gap-4 mb-8 pb-4 border-b border-slate-200">
-                    <button onClick={goToList} className="text-slate-500 hover:text-slate-900 bg-white border border-slate-300 p-2 rounded-md transition-all shadow-sm font-bold px-4 text-sm tracking-wider">
+            <div className="animate-fade-in-right h-full bg-transparent p-6 md:p-8 rounded-tl-3xl flex flex-col">
+                <div className="flex items-center gap-4 mb-8 pb-4 border-b border-white/40">
+                    <button onClick={goToList} className="text-slate-500 hover:text-slate-900 glass-panel border border-slate-300 p-2 rounded-md transition-all shadow-lg font-bold px-4 text-sm tracking-wider">
                         ⬅️ GERİ DÖN
                     </button>
-                    <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Öğrenci Profili</h2>
+                    <h2 className="text-2xl font-bold tracking-tight text-slate-800 text-slate-800 tracking-tight uppercase">Öğrenci Profili</h2>
                 </div>
 
                 <div className="max-w-4xl mx-auto w-full">
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+                    <div className="glass-panel rounded-2xl shadow-lg border border-white/40 overflow-hidden mb-6">
                         <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-8 md:p-10 text-white flex flex-col md:flex-row items-center md:items-start gap-6 relative overflow-hidden">
                             <div className="absolute right-0 top-0 w-64 h-64 bg-blue-500/20 rounded-full blur-[80px]"></div>
 
                             {/* 🚀 ÇÖKME KORUMASI: Optional chaining ve varsayılan değerler eklendi */}
-                            <div className="w-24 h-24 bg-white/10 backdrop-blur-md text-white rounded-2xl flex items-center justify-center text-4xl font-black shadow-inner border border-white/20 relative z-10 shrink-0">
+                            <div className="w-24 h-24 glass-panel/10 backdrop-blur-md text-white rounded-2xl flex items-center justify-center text-4xl font-bold tracking-tight text-slate-800 shadow-inner border border-white/20 relative z-10 shrink-0">
                                 {selectedStudent.firstName?.charAt(0) || ''}{selectedStudent.lastName?.charAt(0) || ''}
                             </div>
                             <div className="relative z-10 text-center md:text-left flex-1">
-                                <h3 className="text-3xl md:text-4xl font-black tracking-tight mb-2">{selectedStudent.firstName} {selectedStudent.lastName}</h3>
+                                <h3 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-800 tracking-tight mb-2">{selectedStudent.firstName} {selectedStudent.lastName}</h3>
                                 <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-3">
                                     <span className="px-3 py-1 rounded-md text-xs font-bold tracking-widest uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                                         SINIF: {selectedStudent.grade || 'ATANMADI'}
@@ -313,11 +313,11 @@ const StudentManagementTab: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="p-6 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
-                            <button onClick={() => handleDelete(selectedStudent.id, selectedStudent.firstName)} className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-6 py-2.5 rounded-lg font-bold text-sm tracking-widest transition-all shadow-sm">
+                        <div className="p-6 bg-transparent border-t border-white/40 flex justify-end gap-3">
+                            <button onClick={() => handleDelete(selectedStudent.id, selectedStudent.firstName)} className="glass-panel border border-red-200 text-red-600 hover:bg-red-50 px-6 py-2.5 rounded-lg font-bold text-sm tracking-widest transition-all shadow-lg">
                                 SİSTEMDEN SİL
                             </button>
-                            <button onClick={() => openEditForm(selectedStudent)} className="bg-slate-900 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg font-bold text-sm tracking-widest shadow-md transition-all">
+                            <button onClick={() => openEditForm(selectedStudent)} className="bg-slate-900 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg font-bold text-sm tracking-widest shadow-lg transition-all">
                                 BİLGİLERİ DÜZENLE
                             </button>
                         </div>
@@ -329,17 +329,17 @@ const StudentManagementTab: React.FC = () => {
 
     if (viewMode === 'form') {
         return (
-            <div className="animate-fade-in-right h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl flex flex-col">
-                <div className="flex items-center gap-4 mb-8 pb-4 border-b border-slate-200">
-                    <button onClick={selectedStudent ? () => setViewMode('detail') : goToList} className="text-slate-500 hover:text-slate-900 bg-white border border-slate-300 p-2 rounded-md transition-all shadow-sm font-bold px-4 text-sm tracking-wider">
+            <div className="animate-fade-in-right h-full bg-transparent p-6 md:p-8 rounded-tl-3xl flex flex-col">
+                <div className="flex items-center gap-4 mb-8 pb-4 border-b border-white/40">
+                    <button onClick={selectedStudent ? () => setViewMode('detail') : goToList} className="text-slate-500 hover:text-slate-900 glass-panel border border-slate-300 p-2 rounded-md transition-all shadow-lg font-bold px-4 text-sm tracking-wider">
                         İPTAL
                     </button>
-                    <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">
+                    <h2 className="text-2xl font-bold tracking-tight text-slate-800 text-slate-800 tracking-tight uppercase">
                         {selectedStudent ? 'Öğrenci Bilgilerini Güncelle' : 'Yeni Öğrenci Kaydı'}
                     </h2>
                 </div>
 
-                <div className="max-w-4xl mx-auto w-full bg-white p-8 md:p-10 rounded-md shadow-sm border border-slate-200">
+                <div className="max-w-4xl mx-auto w-full glass-panel p-8 md:p-10 rounded-md shadow-lg border border-white/40">
                     <form onSubmit={handleSubmit} className="space-y-8">
 
                         <section>
@@ -347,19 +347,19 @@ const StudentManagementTab: React.FC = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Ad *</label>
-                                    <input required type="text" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" />
+                                    <input required type="text" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Soyad *</label>
-                                    <input required type="text" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" />
+                                    <input required type="text" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Okul Numarası *</label>
-                                    <input required type="text" value={formData.schoolNumber} onChange={e => setFormData({...formData, schoolNumber: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" />
+                                    <input required type="text" value={formData.schoolNumber} onChange={e => setFormData({...formData, schoolNumber: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Cinsiyet</label>
-                                    <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer">
+                                    <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-blue-700 outline-none transition-all cursor-pointer">
                                         <option value="Belirtilmemiş">Belirtilmemiş</option>
                                         <option value="Kız">Kız</option>
                                         <option value="Erkek">Erkek</option>
@@ -367,7 +367,7 @@ const StudentManagementTab: React.FC = () => {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Kayıtlı Olduğu Sınıf *</label>
-                                    <select required value={formData.grade} onChange={e => setFormData({...formData, grade: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer">
+                                    <select required value={formData.grade} onChange={e => setFormData({...formData, grade: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-blue-700 outline-none transition-all cursor-pointer">
                                         <option value="" disabled>Sınıf Seçiniz</option>
                                         {classrooms.map(c => (
                                             <option key={c.id} value={c.name}>{c.name} Sınıfı</option>
@@ -381,7 +381,7 @@ const StudentManagementTab: React.FC = () => {
                             <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2 mb-6 text-blue-700">2. Veli Ataması (İsteğe Bağlı)</h3>
                             <div>
                                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Kayıtlı Velilerden Seçin</label>
-                                <select value={formData.parentId} onChange={e => setFormData({...formData, parentId: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer">
+                                <select value={formData.parentId} onChange={e => setFormData({...formData, parentId: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-blue-700 outline-none transition-all cursor-pointer">
                                     <option value="">-- Şimdilik Veli Atama (Boş Bırak) --</option>
                                     {parents.map(p => (
                                         <option key={p.id} value={p.id}>{p.firstName} {p.lastName} (Tel: {p.phoneNumber})</option>
@@ -396,26 +396,26 @@ const StudentManagementTab: React.FC = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Sistem Kullanıcı Adı *</label>
-                                        <input required type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-purple-700 outline-none transition-all placeholder:text-slate-400" placeholder="Örn: ahmet.yilmaz" />
+                                        <input required type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-purple-700 outline-none transition-all placeholder:text-slate-400" placeholder="Örn: ahmet.yilmaz" />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">{selectedStudent ? 'Şifre (Değişmeyecekse Boş Bırak)' : 'Sistem Giriş Şifresi *'}</label>
-                                        <input required={!selectedStudent} type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-purple-700 outline-none transition-all placeholder:text-slate-400" placeholder="••••••••" />
+                                        <input required={!selectedStudent} type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-purple-700 outline-none transition-all placeholder:text-slate-400" placeholder="••••••••" />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Öğrenci Telefon Numarası *</label>
-                                        <input required type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-purple-700 outline-none transition-all placeholder:text-slate-400" placeholder="05XX XXX XX XX" />
+                                        <input required type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-purple-700 outline-none transition-all placeholder:text-slate-400" placeholder="05XX XXX XX XX" />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Öğrenci E-Posta (İsteğe Bağlı)</label>
-                                        <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-purple-700 outline-none transition-all placeholder:text-slate-400" placeholder="ogrenci@mail.com" />
+                                        <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-purple-700 outline-none transition-all placeholder:text-slate-400" placeholder="ogrenci@mail.com" />
                                     </div>
                                 </div>
                             </section>
                         )}
 
-                        <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-slate-200">
-                            <button type="submit" className="bg-blue-700 hover:bg-blue-800 text-white px-8 py-3 rounded-md font-bold text-sm tracking-widest shadow-md transition-all">
+                        <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-white/40">
+                            <button type="submit" className="bg-blue-700 hover:bg-blue-800 text-white px-8 py-3 rounded-md font-bold text-sm tracking-widest shadow-lg transition-all">
                                 {selectedStudent ? 'DEĞİŞİKLİKLERİ UYGULA' : 'ÖĞRENCİYİ SİSTEME KAYDET'}
                             </button>
                         </div>
