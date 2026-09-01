@@ -1,4 +1,4 @@
-import { Megaphone, MessageSquare, UserCircle, LogOut, ArrowLeft, GraduationCap, BarChart3, Users, BookOpen, Home, School } from 'lucide-react';
+import { Megaphone, MessageSquare, UserCircle, LogOut, ArrowLeft, Home, School } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../services/api';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Megaphone, MessageSquare, UserCircle, LogOut, ArrowLeft, GraduationCap, BarChart3, Users, BookOpen } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import StudentManagementTab from '../../components/school-admin/StudentManagementTab';
 import ClassroomTab from '../../components/school-admin/ClassroomTab';
