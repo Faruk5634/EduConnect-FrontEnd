@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../../services/api';
 import { showToast } from '../../utils/toast';
+import { useClassrooms } from '../../hooks/useClassrooms';
 
 // --- ŞABLONLAR (INTERFACES) ---
 interface Classroom {
@@ -8,38 +8,15 @@ interface Classroom {
     name: string;
     gradeLevel: number;
     homeroomTeacherFullName: string;
-    studentNames: string[];
-}
-
-interface Teacher {
-    id: number;
-    firstName: string;
-    lastName: string;
-    branch: string;
-}
-
-interface Student {
-    id: number;
-    firstName: string;
-    lastName: string;
-    schoolNumber: string;
-    grade: string;
-    parentFullName: string;
+    studentNames?: string[];
 }
 
 const ClassroomTab: React.FC = () => {
+    const { classrooms, teachers, classStudents, schoolType, loading, fetchInitialData, fetchClassStudents, createOrUpdateClass, deleteClass, deleteStudent } = useClassrooms();
+
     // 🎛️ Arayüz Durumları
     const [viewMode, setViewMode] = useState<'list' | 'detail' | 'form'>('list');
     const [selectedClass, setSelectedClass] = useState<Classroom | null>(null);
-
-    // 📡 Veri Durumları
-    const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-    const [teachers, setTeachers] = useState<Teacher[]>([]);
-    const [classStudents, setClassStudents] = useState<Student[]>([]);
-
-    // 🏫 OTOMATİK KURUM TÜRÜ HAFIZASI
-    const [schoolType, setSchoolType] = useState<string>('');
-    const [loading, setLoading] = useState(true);
 
     // 🔍 Arama ve Filtreleme Durumları (YENİ EKLENDİ)
     const [searchTerm, setSearchTerm] = useState('');
@@ -71,43 +48,11 @@ const ClassroomTab: React.FC = () => {
 
     useEffect(() => {
         fetchInitialData();
-    }, []);
+    }, [fetchInitialData]);
 
-    // Not: api instance interceptor Authorization header ekler, getAuthHeaders artık gerekmiyor
+    // Data loading & mutations are handled by useClassrooms hook (fetchInitialData, fetchClassStudents, createOrUpdateClass, ...)
 
-    // --- VERİ ÇEKME İŞLEMLERİ ---
-    const fetchInitialData = async () => {
-        setLoading(true);
-        try {
-            try {
-                const userRes = await api.get('/users/me');
-                setSchoolType(userRes.data.schoolType || 'HIGH_SCHOOL');
-            } catch (err) {
-                console.warn("Kullanıcı türü çekilemedi.");
-            }
-
-            const [classRes, teacherRes] = await Promise.all([
-                api.get('/classrooms'),
-                api.get('/teachers')
-            ]);
-            setClassrooms(classRes.data);
-            setTeachers(teacherRes.data);
-        } catch (error) {
-            console.error("Veriler çekilemedi:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchClassStudents = async (className: string) => {
-        try {
-            const response = await api.get('/students/list');
-            const filtered = response.data.filter((s: Student) => s.grade === className);
-            setClassStudents(filtered);
-        } catch (error) {
-            console.error("Öğrenciler çekilemedi:", error);
-        }
-    };
+    // NOTE: useClassrooms provides fetchInitialData and fetchClassStudents which are used elsewhere in this component.
 
     // 🚀 FİLTRELEME MOTORU (YENİ EKLENDİ)
     const filteredClassrooms = classrooms.filter(cls => {
@@ -161,31 +106,15 @@ const ClassroomTab: React.FC = () => {
              return;
          }
 
-        // 🛡️ ÇAKIŞMA ÖNLEYİCİ (YENİ EKLENDİ)
-        // Eğer aynı isimde bir sınıf varsa VE bu sınıf şu an düzenlediğimiz sınıf değilse hata ver!
         const isDuplicate = classrooms.some(c => c.name === generatedClassName && c.id !== selectedClass?.id);
         if (isDuplicate) {
             showToast(`Kaptan, ${generatedClassName} sınıfı sistemde zaten mevcut! Lütfen farklı bir şube seçiniz.`, 'error');
-             return; // İşlemi durdur
+             return;
         }
 
         try {
-            if (selectedClass) {
-                let url = `/classrooms/${selectedClass.id}`;
-                if (classForm.teacherId) url += `?teacherId=${classForm.teacherId}`;
-
-                await api.put(url, { name: generatedClassName, gradeLevel: Number(classForm.gradeLevel) });
-                showToast("Sınıf bilgileri başarıyla güncellendi! ✅", 'success');
-            } else {
-                const response = await api.post('/classrooms', { name: generatedClassName, gradeLevel: Number(classForm.gradeLevel) });
-                const newClassId = response.data.id;
-
-                if (classForm.teacherId) {
-                    await api.put(`/classrooms/${newClassId}/teacher/${classForm.teacherId}`, {});
-                }
-                showToast("Sınıf başarıyla oluşturuldu! 🏫", 'success');
-            }
-
+            await createOrUpdateClass({ name: generatedClassName, gradeLevel: Number(classForm.gradeLevel), teacherId: classForm.teacherId || undefined }, selectedClass?.id ?? undefined);
+            showToast(selectedClass ? "Sınıf bilgileri başarıyla güncellendi! ✅" : "Sınıf başarıyla oluşturuldu! 🏫", 'success');
             goToList();
             fetchInitialData();
         } catch (error) {
@@ -198,7 +127,7 @@ const ClassroomTab: React.FC = () => {
         if (!selectedClass) return;
         if (!window.confirm("Bu sınıfı silmek istediğinize emin misiniz? (Öğrenciler silinmez, sadece sınıf kaydı silinir)")) return;
         try {
-            await api.delete(`/classrooms/${selectedClass.id}`);
+            await deleteClass(selectedClass.id);
             goToList();
             fetchInitialData();
         } catch (error) {
@@ -210,8 +139,7 @@ const ClassroomTab: React.FC = () => {
     const handleDeleteStudent = async (id: number) => {
         if (!window.confirm("Bu öğrenciyi sistemden silmek istediğinize emin misiniz?")) return;
         try {
-            await api.delete(`/students/${id}`);
-            setClassStudents(classStudents.filter(s => s.id !== id));
+            await deleteStudent(id);
         } catch (error) {
             console.error(error);
             showToast("Öğrenci silinemedi!", 'error');

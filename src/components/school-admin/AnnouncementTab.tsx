@@ -1,23 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api, API_BASE } from '../../services/api';
 import { showToast } from '../../utils/toast';
-
-// 🚀 GÜNCELLEME: Dosya listesi için yardımcı arayüz eklendi
-interface AnnouncementFile {
-    fileName: string;
-    fileUrl: string;
-}
-
-interface Announcement {
-    id: number;
-    title: string;
-    content: string;
-    createdDate: string;
-    authorName: string;
-    type: string;
-    targetClasses: string[]; // 🚀 GÜNCELLEME: Tek sınıf yerine hedef sınıfların listesi
-    attachedFiles?: AnnouncementFile[]; // 🚀 GÜNCELLEME: Çoklu dosya listesi
-}
+import { useAnnouncements } from '../../hooks/useAnnouncements';
 
 interface Classroom {
     id: number;
@@ -25,15 +9,14 @@ interface Classroom {
 }
 
 export default function AnnouncementTab() {
-    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+    const { announcements, loading, fetchAll, create, remove } = useAnnouncements();
     const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-    const [loading, setLoading] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
     // Form & Dosya Durumları
     const [form, setForm] = useState({ title: '', content: '', type: 'GENERAL' });
-    const [selectedClassIds, setSelectedClassIds] = useState<number[]>([]); // 🚀 Çoklu sınıf seçimi için dizi
-    const [selectedFiles, setSelectedFiles] = useState<File[]>([]); // 🚀 Çoklu dosya seçimi için dizi
+    const [selectedClassIds, setSelectedClassIds] = useState<number[]>([]); // Çoklu sınıf seçimi için dizi
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]); // Çoklu dosya seçimi için dizi
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Filtreleme Durumları
@@ -41,24 +24,9 @@ export default function AnnouncementTab() {
     const [typeFilter, setTypeFilter] = useState('ALL');
 
     useEffect(() => {
-        fetchAnnouncements();
+        fetchAll();
         fetchClassrooms();
-    }, []);
-
-    const fetchAnnouncements = async () => {
-        setLoading(true);
-        try {
-            const response = await api.get('/announcements');
-            const sorted = response.data.sort((a: Announcement, b: Announcement) =>
-                new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime()
-            );
-            setAnnouncements(sorted);
-        } catch (error) {
-            console.error("Duyurular çekilemedi:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    }, [fetchAll]);
 
     const fetchClassrooms = async () => {
         try {
@@ -72,9 +40,8 @@ export default function AnnouncementTab() {
     const handleDelete = async (id: number) => {
         if (!window.confirm("Bu duyuruyu yayından kaldırmak istediğinize emin misiniz?")) return;
         try {
-            await api.delete(`/announcements/${id}`);
-            showToast('Duyuru başarıyla kaldırıldı.', 'success');
-            fetchAnnouncements();
+            await remove(id);
+            fetchAll();
         } catch (error) {
             console.error(error);
             showToast("Duyuru kaldırılamadı!", 'error');
@@ -136,15 +103,13 @@ export default function AnnouncementTab() {
         selectedFiles.forEach(file => formData.append('files', file));
 
         try {
-            await api.post('/announcements/create', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            await create(formData);
             setIsCreateModalOpen(false);
             setForm({ title: '', content: '', type: 'GENERAL' });
             setSelectedClassIds([]);
             setSelectedFiles([]);
             showToast('Duyuru başarıyla yayınlandı.', 'success');
-            fetchAnnouncements();
+            fetchAll();
         } catch (error) {
             console.error(error);
             showToast("Duyuru yayınlanırken hata oluştu!", 'error');

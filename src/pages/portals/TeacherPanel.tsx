@@ -2,50 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, API_BASE } from '../../services/api';
 import { showToast } from '../../utils/toast';
-
-interface ClassroomInfo {
-    id: number;
-    name: string;
-}
-
-interface TeacherProfile {
-    id: number;
-    firstName: string;
-    lastName: string;
-    branch: string;
-    username: string;
-    phone: string;
-    email: string;
-    homeroomClasses: ClassroomInfo[];
-}
-
-interface AnnouncementFile {
-    fileName: string;
-    fileUrl: string;
-}
-
-interface Announcement {
-    id: number;
-    title: string;
-    content: string;
-    createdDate: string;
-    authorName: string;
-    type: string;
-    targetClasses: string[];
-    attachedFiles?: AnnouncementFile[];
-}
-
-interface Message {
-    id: number;
-    subject: string;
-    content: string;
-    date: string;
-    time: string;
-    isRead: boolean;
-    type: 'INBOX' | 'SENT';
-    sender: string;
-    isSentByParent?: boolean;
-}
+import { useTeacherProfile } from '../../hooks/useProfile';
+import { useAnnouncements } from '../../hooks/useAnnouncements';
+import { useMessages } from '../../hooks/useMessages';
+import { useUserSearch, type SearchUser } from '../../hooks/useUserSearch';
+import type { ClassroomInfo, Announcement, Message } from '../../types/panelTypes';
 
 type ProfileViewMode = 'overview' | 'editPersonal' | 'editEmail' | 'editPhone' | 'editPassword';
 
@@ -53,12 +14,12 @@ export default function TeacherPanel() {
     const navigate = useNavigate();
 
     const [activeTab, setActiveTab] = useState('overview');
-    const [profile, setProfile] = useState<TeacherProfile | null>(null);
+    const { profile, loading: profileLoading, setProfile } = useTeacherProfile();
     const [allClassrooms, setAllClassrooms] = useState<ClassroomInfo[]>([]);
-    const [loading, setLoading] = useState(true);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+    const { loading: announcementsLoading, fetchAll: fetchAllAnnouncements, create: createAnnouncement, remove: removeAnnouncement } = useAnnouncements();
     const [myAnnouncements, setMyAnnouncements] = useState<Announcement[]>([]);
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
@@ -67,7 +28,7 @@ export default function TeacherPanel() {
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const [messages, setMessages] = useState<Message[]>([]);
+    const { messages, loading: messagesLoading, fetchAll: fetchMessages, send: sendMessage, markRead } = useMessages();
     const [mailBoxView, setMailBoxView] = useState<'INBOX' | 'SENT'>('INBOX');
     const [rightPaneMode, setRightPaneMode] = useState<'EMPTY' | 'READ' | 'COMPOSE'>('EMPTY');
     const [msgReceiverId, setMsgReceiverId] = useState('');
@@ -76,14 +37,16 @@ export default function TeacherPanel() {
     const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
 
     const [userSearchQuery, setUserSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState<{userId: number, fullName: string, role: string}[]>([]);
-    const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+    const { results: searchResults, visible: searchVisible } = useUserSearch(userSearchQuery);
+    const [showSearchDropdown, setShowSearchDropdown] = useState(false); // retained to preserve UI toggling
     const [selectedReceiverName, setSelectedReceiverName] = useState('');
 
     const [profileViewMode, setProfileViewMode] = useState<ProfileViewMode>('overview');
     const [updateForm, setUpdateForm] = useState({
         firstName: '', lastName: '', email: '', phone: '', currentPassword: '', newPassword: ''
     });
+
+    const loading = profileLoading || announcementsLoading || messagesLoading;
 
     const isNotHome = activeTab !== 'overview' || profileViewMode !== 'overview' || rightPaneMode !== 'EMPTY';
     const isNotHomeRef = useRef(isNotHome);
@@ -119,26 +82,13 @@ export default function TeacherPanel() {
     }, []);
 
     useEffect(() => {
-        const delayDebounceFn = setTimeout(async () => {
-            if (userSearchQuery.length >= 2) {
-                try {
-                    const res = await api.get(`/messages/search-users?keyword=${userSearchQuery}`);
-                    setSearchResults(res.data);
-                    setShowSearchDropdown(true);
-                } catch (error) {
-                    console.error("Arama hatası", error);
-                }
-            } else {
-                setSearchResults([]);
-                setShowSearchDropdown(false);
-            }
-        }, 400);
-
-        return () => clearTimeout(delayDebounceFn);
-    }, [userSearchQuery]);
+        // synchronize local dropdown visibility with search hook
+        setShowSearchDropdown(searchVisible);
+    }, [searchVisible]);
 
     const fetchInitialData = async () => {
         try {
+            // Fetch profile (and update local copy)
             const profileRes = await api.get('/teachers/me');
             setProfile(profileRes.data);
 
@@ -150,16 +100,22 @@ export default function TeacherPanel() {
                 phone: profileRes.data.phone
             }));
 
+            // Classrooms
             const classRes = await api.get('/classrooms/school');
             setAllClassrooms(classRes.data);
 
-            await fetchMyAnnouncements(`${profileRes.data.firstName} ${profileRes.data.lastName}`);
+            // Announcements & Messages (use hook helpers where possible)
+            await fetchAllAnnouncements();
+            // Ensure teacher-specific announcements are set
+            const annRes = await api.get('/announcements');
+            const mine = annRes.data.filter((a: Announcement) => a.authorName === `${profileRes.data.firstName} ${profileRes.data.lastName}`);
+            const sorted = mine.sort((a: Announcement, b: Announcement) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime());
+            setMyAnnouncements(sorted);
+
             await fetchMessages();
         } catch (err) {
             console.error("Veriler çekilemedi:", err);
             showToast("Bilgiler yüklenirken hata oluştu.", "error");
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -174,14 +130,7 @@ export default function TeacherPanel() {
         }
     };
 
-    const fetchMessages = async () => {
-        try {
-            const msgRes = await api.get('/messages');
-            setMessages(msgRes.data);
-        } catch (error) {
-            console.error("Mesajlar çekilemedi", error);
-        }
-    };
+    // Messages are managed by useMessages hook (fetchAll available via fetchMessages variable from hook)
 
     const toggleClassSelection = (classId: number) => {
         setSelectedClassIds(prev =>
@@ -243,9 +192,7 @@ export default function TeacherPanel() {
                 formData.append('files', file);
             });
 
-            await api.post('/announcements/create', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            await createAnnouncement(formData);
 
             showToast('Duyuru seçili sınıflara başarıyla gönderildi! 🚀', 'success');
             setTitle('');
@@ -253,7 +200,10 @@ export default function TeacherPanel() {
             setSelectedClassIds([]);
             setSelectedFiles([]);
 
-            if (profile) fetchMyAnnouncements(`${profile.firstName} ${profile.lastName}`);
+            if (profile) {
+                await fetchAllAnnouncements();
+                await fetchMyAnnouncements(`${profile.firstName} ${profile.lastName}`);
+            }
             setActiveTab('my-announcements');
 
         } catch (error) {
@@ -266,9 +216,9 @@ export default function TeacherPanel() {
     const handleDeleteAnnouncement = async (id: number) => {
         if (!window.confirm("Bu duyuruyu yayından kaldırmak istediğinize emin misiniz?")) return;
         try {
-            await api.delete(`/announcements/${id}`);
+            await removeAnnouncement(id);
             showToast('Duyuru başarıyla silindi.', 'success');
-            if (profile) fetchMyAnnouncements(`${profile.firstName} ${profile.lastName}`);
+            if (profile) await fetchMyAnnouncements(`${profile.firstName} ${profile.lastName}`);
         } catch (error) {
             console.error(error);
             showToast("Duyuru silinirken hata oluştu!", 'error');
@@ -290,11 +240,7 @@ export default function TeacherPanel() {
             return;
         }
         try {
-            await api.post('/messages', {
-                receiverId: msgReceiverId,
-                subject: msgSubject,
-                content: msgContent
-            });
+            await sendMessage({ receiverId: msgReceiverId, subject: msgSubject, content: msgContent });
 
             showToast('Mesaj başarıyla gönderildi!', 'success');
 
@@ -317,8 +263,7 @@ export default function TeacherPanel() {
         setRightPaneMode('READ');
         if (msg.type === 'INBOX' && !msg.isRead) {
             try {
-                await api.put(`/messages/${msg.id}/read`);
-                setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isRead: true } : m));
+                await markRead(msg.id);
             } catch (error) {
                 console.error("Okundu işaretlenemedi", error);
             }
@@ -821,7 +766,7 @@ export default function TeacherPanel() {
                                                                 <div className="relative">
                                                                     {showSearchDropdown && searchResults.length > 0 && (
                                                                         <div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in-down">
-                                                                            {searchResults.map((user: any) => (
+                                                                            {searchResults.map((user: SearchUser) => (
                                                                                 <div key={user.userId} onClick={() => handleSelectUser(user)} className="px-5 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between transition-colors">
                                                                                     <p className="text-sm font-bold text-slate-800">{user.fullName}</p>
                                                                                     <p className="text-[10px] font-black text-blue-600 bg-blue-100 px-2 py-1 rounded uppercase tracking-widest">{user.role}</p>

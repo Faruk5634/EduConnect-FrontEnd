@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { showToast } from '../../utils/toast';
 
-interface StudentInfo { id: number; firstName: string; lastName: string; schoolNumber: string; grade: string; }
 interface Parent { id: number; firstName: string; lastName: string; email: string; phoneNumber: string; username?: string; studentNames?:string[]; }
 
 const ParentTab: React.FC = () => {
