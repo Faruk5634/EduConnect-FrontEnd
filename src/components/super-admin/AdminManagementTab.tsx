@@ -139,37 +139,37 @@ const AdminManagementTab: React.FC = () => {
 
     if (viewMode === 'list') {
         return (
-            <div className="animate-fade-in-down h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl">
+            <div className="animate-fade-in-down h-full bg-transparent p-6 md:p-8 rounded-tl-3xl">
                 <div className="flex justify-between items-center mb-6">
                     <div>
                         <h2 className="text-2xl font-extrabold text-slate-800">Yönetici ve Atama Merkezi</h2>
                         <p className="text-slate-500 text-sm mt-1">Yöneticilerin detaylarını görmek için listedeki satırlara tıklayın.</p>
                     </div>
-                    <button onClick={openCreate} className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md font-bold shadow-md transition-all flex items-center gap-2 text-sm tracking-widest">
+                    <button onClick={openCreate} className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md font-bold shadow-lg transition-all flex items-center gap-2 text-sm tracking-widest">
                         <span>➕</span> YENİ YÖNETİCİ EKLE
                     </button>
                 </div>
 
-                <div className="bg-white p-4 rounded-md shadow-sm border border-slate-200 mb-6 flex flex-col lg:flex-row gap-4">
+                <div className="glass-panel p-4 rounded-md shadow-lg border border-white/40 mb-6 flex flex-col lg:flex-row gap-4">
                     <div className="flex-1">
-                        <input type="text" placeholder="İsim, Soyisim veya Kurum Adı Ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" />
+                        <input type="text" placeholder="İsim, Soyisim veya Kurum Adı Ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-transparent border border-white/40 rounded-md px-4 py-2.5 text-sm font-semibold focus:glass-panel focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" />
                     </div>
                     <div className="w-full lg:w-48">
-                        <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700">
+                        <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="w-full bg-transparent border border-white/40 rounded-md px-4 py-2.5 text-sm font-semibold focus:glass-panel focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700">
                             <option value="ALL">Tüm Rütbeler</option>
                             <option value="ROLE_ADMIN">Sadece Müdürler</option>
                             <option value="ROLE_VICE_ADMIN">Sadece Müdür Yrd.</option>
                         </select>
                     </div>
                     <div className="w-full lg:w-56">
-                        <select value={schoolFilter} onChange={(e) => setSchoolFilter(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700">
+                        <select value={schoolFilter} onChange={(e) => setSchoolFilter(e.target.value)} className="w-full bg-transparent border border-white/40 rounded-md px-4 py-2.5 text-sm font-semibold focus:glass-panel focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700">
                             <option value="ALL">Tüm Kurumlar</option>
                             <option value="UNASSIGNED">Boşta Bekleyenler</option>
                             {schools.map(s => <option key={s.id} value={s.id.toString()}>{s.name}</option>)}
                         </select>
                     </div>
                     <div className="w-full lg:w-40">
-                        <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700">
+                        <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} className="w-full bg-transparent border border-white/40 rounded-md px-4 py-2.5 text-sm font-semibold focus:glass-panel focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700">
                             <option value="DEFAULT">Kayıt Sırası</option>
                             <option value="AZ">A'dan Z'ye</option>
                             <option value="ZA">Z'den A'ya</option>
@@ -177,10 +177,10 @@ const AdminManagementTab: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="bg-white border border-slate-200 rounded-md shadow-sm overflow-hidden">
+                <div className="glass-panel border border-white/40 rounded-md shadow-lg overflow-hidden">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider font-bold">
+                        <tr className="bg-transparent border-b border-white/40 text-slate-500 text-xs uppercase tracking-wider font-bold">
                             <th className="p-5">Yönetici</th>
                             <th className="p-5">E-Posta Adresi</th>
                             <th className="p-5">Rütbe</th>
@@ -203,13 +203,13 @@ const AdminManagementTab: React.FC = () => {
                                         {admin.email ? admin.email : <span className="text-slate-400 italic">Belirtilmemiş</span>}
                                     </td>
                                     <td className="p-5">
-                                      <span className={`px-2 py-1 rounded text-[10px] font-black uppercase border tracking-widest ${admin.role === 'ROLE_ADMIN' ? 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/20' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                                      <span className={`px-2 py-1 rounded text-[10px] font-bold tracking-tight text-slate-800 uppercase border tracking-widest ${admin.role === 'ROLE_ADMIN' ? 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/20' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
                                         {admin.role === 'ROLE_ADMIN' ? 'MÜDÜR' : 'MÜDÜR YRD.'}
                                       </span>
                                     </td>
                                     <td className="p-5 font-medium text-sm">
                                         {admin.schoolName === 'Boşta' ? (
-                                            <span className="text-amber-500 bg-amber-50 px-2 py-1 rounded text-[10px] font-black uppercase border border-amber-200 tracking-widest">Boşta (Atama Bekliyor)</span>
+                                            <span className="text-amber-500 bg-amber-50 px-2 py-1 rounded text-[10px] font-bold tracking-tight text-slate-800 uppercase border border-amber-200 tracking-widest">Boşta (Atama Bekliyor)</span>
                                         ) : <span className="text-slate-700">{admin.schoolName}</span>}
                                     </td>
                                 </tr>
@@ -223,14 +223,14 @@ const AdminManagementTab: React.FC = () => {
     }
 
     return (
-        <div className="animate-fade-in-right h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl">
+        <div className="animate-fade-in-right h-full bg-transparent p-6 md:p-8 rounded-tl-3xl">
 
-            <div className="flex items-center gap-4 mb-8 pb-4 border-b border-slate-200">
-                <button onClick={goToList} className="text-slate-500 hover:text-slate-900 bg-white border border-slate-300 p-2 rounded-md transition-all shadow-sm font-bold px-4 text-sm tracking-widest">
+            <div className="flex items-center gap-4 mb-8 pb-4 border-b border-white/40">
+                <button onClick={goToList} className="text-slate-500 hover:text-slate-900 glass-panel border border-slate-300 p-2 rounded-md transition-all shadow-lg font-bold px-4 text-sm tracking-widest">
                     GERİ DÖN
                 </button>
                 <div>
-                    <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">
+                    <h2 className="text-2xl font-bold tracking-tight text-slate-800 text-slate-800 tracking-tight uppercase">
                         {viewMode === 'create' ? 'YENİ YÖNETİCİ OLUŞTUR' : viewMode === 'edit' ? 'YÖNETİCİ BİLGİLERİNİ GÜNCELLE' : 'YÖNETİCİ PROFİLİ'}
                     </h2>
                 </div>
@@ -238,15 +238,15 @@ const AdminManagementTab: React.FC = () => {
 
             {viewMode === 'detail' && selectedAdmin && (
                 <div className="max-w-4xl mx-auto">
-                    <div className="bg-white rounded-md shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="glass-panel rounded-md shadow-lg border border-white/40 overflow-hidden">
 
                         <div className="bg-[#1e293b] p-8 text-white flex items-center gap-6">
                             {/* 🚀 ÇÖKME KORUMASI: Optional Chaining Eklendi */}
-                            <div className="w-20 h-20 bg-slate-700/50 text-white rounded-md flex items-center justify-center text-3xl font-black shadow-inner border border-slate-600">
+                            <div className="w-20 h-20 bg-slate-700/50 text-white rounded-md flex items-center justify-center text-3xl font-bold tracking-tight text-slate-800 shadow-inner border border-slate-600">
                                 {selectedAdmin.firstName?.charAt(0) || ''}{selectedAdmin.lastName?.charAt(0) || ''}
                             </div>
                             <div>
-                                <h3 className="text-3xl font-black">{selectedAdmin.firstName} {selectedAdmin.lastName}</h3>
+                                <h3 className="text-3xl font-bold tracking-tight text-slate-800">{selectedAdmin.firstName} {selectedAdmin.lastName}</h3>
                                 <div className="mt-3 inline-block">
                                   <span className={`px-3 py-1 rounded text-xs font-bold tracking-widest uppercase ${selectedAdmin.role === 'ROLE_ADMIN' ? 'bg-[#10b981] text-white' : 'bg-blue-600 text-white'}`}>
                                     {selectedAdmin.role === 'ROLE_ADMIN' ? 'OKUL MÜDÜRÜ' : 'MÜDÜR YARDIMCISI'}
@@ -290,11 +290,11 @@ const AdminManagementTab: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="p-6 bg-white border-t border-slate-200 flex justify-end gap-3">
-                            <button onClick={() => handleDelete(selectedAdmin.id)} className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-6 py-2.5 rounded-md font-bold text-sm tracking-widest transition-all">
+                        <div className="p-6 glass-panel border-t border-white/40 flex justify-end gap-3">
+                            <button onClick={() => handleDelete(selectedAdmin.id)} className="glass-panel border border-red-200 text-red-600 hover:bg-red-50 px-6 py-2.5 rounded-md font-bold text-sm tracking-widest transition-all">
                                 SİSTEMDEN SİL
                             </button>
-                            <button onClick={openEdit} className="bg-[#0f172a] hover:bg-blue-700 text-white px-8 py-2.5 rounded-md font-bold text-sm tracking-widest shadow-md transition-all">
+                            <button onClick={openEdit} className="bg-[#0f172a] hover:bg-blue-700 text-white px-8 py-2.5 rounded-md font-bold text-sm tracking-widest shadow-lg transition-all">
                                 DÜZENLE
                             </button>
                         </div>
@@ -303,33 +303,33 @@ const AdminManagementTab: React.FC = () => {
             )}
 
             {(viewMode === 'create' || viewMode === 'edit') && (
-                <div className="max-w-3xl mx-auto bg-white p-8 md:p-10 rounded-md shadow-sm border border-slate-200">
+                <div className="max-w-3xl mx-auto glass-panel p-8 md:p-10 rounded-md shadow-lg border border-white/40">
                     <form onSubmit={viewMode === 'create' ? handleCreateSubmit : handleUpdateSubmit} className="space-y-6">
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Adı *</label>
-                                <input type="text" required value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="Örn: Ahmet" />
+                                <input type="text" required value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="Örn: Ahmet" />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Soyadı *</label>
-                                <input type="text" required value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="Örn: Yılmaz" />
+                                <input type="text" required value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="Örn: Yılmaz" />
                             </div>
                         </div>
 
                         <div>
                             <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Sistem Kullanıcı Adı *</label>
-                            <input type="text" required value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="ahmet.yilmaz" />
+                            <input type="text" required value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="ahmet.yilmaz" />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Telefon *</label>
-                                <input type="text" required value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="05XX XXX XX XX" />
+                                <input type="text" required value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="05XX XXX XX XX" />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">E-posta (İsteğe Bağlı)</label>
-                                <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="ahmet@okul.com" />
+                                <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="ahmet@okul.com" />
                             </div>
                         </div>
 
@@ -337,31 +337,31 @@ const AdminManagementTab: React.FC = () => {
                             <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">
                                 {viewMode === 'edit' ? 'Şifre Güncelleme (Değiştirmek istemiyorsanız boş bırakın)' : 'Sistem Giriş Şifresi *'}
                             </label>
-                            <input type="password" required={viewMode === 'create'} value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="••••••••" />
+                            <input type="password" required={viewMode === 'create'} value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="••••••••" />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Rütbe Seçimi *</label>
-                                <select required value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer">
+                                <select required value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-blue-700 outline-none transition-all cursor-pointer">
                                     <option value="ROLE_ADMIN">Okul Müdürü</option>
                                     <option value="ROLE_VICE_ADMIN">Müdür Yardımcısı</option>
                                 </select>
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Görev Yeri (İsteğe Bağlı)</label>
-                                <select value={formData.schoolId} onChange={e => setFormData({...formData, schoolId: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer">
+                                <select value={formData.schoolId} onChange={e => setFormData({...formData, schoolId: e.target.value})} className="w-full bg-slate-100 border-2 border-transparent rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-blue-700 outline-none transition-all cursor-pointer">
                                     <option value="">-- Şimdilik Atama Yapma (Boşta) --</option>
                                     {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                 </select>
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-slate-200">
+                        <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-white/40">
                             <button type="button" onClick={viewMode === 'edit' ? () => setViewMode('detail') : goToList} className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-3 rounded-md font-bold text-sm tracking-widest transition-all">
                                 İPTAL
                             </button>
-                            <button type="submit" className="bg-blue-700 hover:bg-blue-800 text-white px-8 py-3 rounded-md font-bold text-sm tracking-widest shadow-md transition-all">
+                            <button type="submit" className="bg-blue-700 hover:bg-blue-800 text-white px-8 py-3 rounded-md font-bold text-sm tracking-widest shadow-lg transition-all">
                                 {viewMode === 'create' ? 'KAYDET VE ONAYLA' : 'DEĞİŞİKLİKLERİ UYGULA'}
                             </button>
                         </div>

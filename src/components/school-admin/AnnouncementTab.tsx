@@ -136,7 +136,7 @@ export default function AnnouncementTab() {
     };
 
     return (
-        <div className="animate-fade-in-down h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl flex flex-col">
+        <div className="animate-fade-in-down h-full bg-transparent p-6 md:p-8 rounded-tl-3xl flex flex-col">
 
             {/* 🎯 ÜST BAR */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -144,13 +144,13 @@ export default function AnnouncementTab() {
                     <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">Okul Duyuru Panosu</h2>
                     <p className="text-slate-500 text-sm mt-1">Öğrencilere ve velilere yönelik bilgilendirmeleri buradan yönetebilirsiniz.</p>
                 </div>
-                <button onClick={() => setIsCreateModalOpen(true)} className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md font-bold shadow-md transition-all flex items-center gap-2 text-sm tracking-widest flex-shrink-0">
+                <button onClick={() => setIsCreateModalOpen(true)} className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md font-bold shadow-lg transition-all flex items-center gap-2 text-sm tracking-widest flex-shrink-0">
                     <span>➕</span> YENİ DUYURU
                 </button>
             </div>
 
             {/* 🎛️ FİLTRE ÇUBUĞU */}
-            <div className="bg-white p-4 rounded-md shadow-sm border border-slate-200 mb-6 flex flex-col sm:flex-row gap-4 flex-shrink-0">
+            <div className="glass-panel p-4 rounded-md shadow-lg border border-white/40 mb-6 flex flex-col sm:flex-row gap-4 flex-shrink-0">
                 <div className="flex-1 relative">
                     <span className="absolute left-4 top-3 text-slate-400">🔍</span>
                     <input
@@ -158,14 +158,14 @@ export default function AnnouncementTab() {
                         placeholder="Duyuru başlığı veya içeriği ara..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-md pl-11 pr-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400"
+                        className="w-full bg-transparent border border-white/40 rounded-md pl-11 pr-4 py-2.5 text-sm font-semibold focus:glass-panel focus:border-blue-700 outline-none transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <div className="w-full sm:w-56">
                     <select
                         value={typeFilter}
                         onChange={(e) => setTypeFilter(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700"
+                        className="w-full bg-transparent border border-white/40 rounded-md px-4 py-2.5 text-sm font-semibold focus:glass-panel focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700"
                     >
                         <option value="ALL">Tüm Duyuru Tipleri</option>
                         <option value="GENERAL">Genel Duyurular</option>
@@ -182,7 +182,7 @@ export default function AnnouncementTab() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
                     {filteredAnnouncements.length === 0 ? (
-                        <div className="col-span-full bg-white rounded-xl border border-slate-200 py-16 text-center shadow-sm">
+                        <div className="col-span-full glass-panel rounded-xl border border-white/40 py-16 text-center shadow-lg">
                             <span className="text-5xl block mb-4">📭</span>
                             <h3 className="text-lg font-bold text-slate-700">Duyuru Bulunamadı</h3>
                             <p className="text-slate-500 text-sm mt-1">Sistemde henüz yayınlanmış bir duyuru yok veya aramanızla eşleşmiyor.</p>
@@ -193,7 +193,7 @@ export default function AnnouncementTab() {
                             const isGeneral = !ann.targetClasses || ann.targetClasses.length === 0 || ann.targetClasses.includes("Genel Duyuru");
 
                             return (
-                                <div key={ann.id} className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative flex flex-col h-full overflow-hidden group">
+                                <div key={ann.id} className="glass-panel rounded-xl border border-white/40 shadow-lg hover:shadow-lg transition-shadow relative flex flex-col h-full overflow-hidden group">
                                     <div className="absolute top-0 left-0 w-full h-1.5 bg-blue-600"></div>
                                     <div className="p-6 flex-1 flex flex-col">
                                         <div className="flex justify-between items-start mb-4">
@@ -207,8 +207,8 @@ export default function AnnouncementTab() {
 
                                         {/* 🚀 GÜNCELLEME: ÇOKLU DOSYA GÖRÜNÜMÜ */}
                                         {ann.attachedFiles && ann.attachedFiles.length > 0 && (
-                                            <div className="bg-slate-50 border border-slate-200 rounded-md p-3 mb-4 space-y-2">
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200 pb-1">
+                                            <div className="bg-transparent border border-white/40 rounded-md p-3 mb-4 space-y-2">
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-white/40 pb-1">
                                                     📎 Eklentiler ({ann.attachedFiles.length})
                                                 </p>
                                                 {ann.attachedFiles.map((file, idx) => (
@@ -242,12 +242,12 @@ export default function AnnouncementTab() {
             {/* 💎 PREMIUM MODAL (DUYURU OLUŞTURMA PENCERESİ) */}
             {isCreateModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-in flex flex-col max-h-[90vh]">
+                    <div className="glass-panel rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-in flex flex-col max-h-[90vh]">
 
                         {/* Modal Başlığı */}
                         <div className="bg-slate-800 p-6 flex justify-between items-center shrink-0">
                             <div>
-                                <h3 className="text-xl font-black text-white tracking-tight">Yeni Duyuru Yayınla</h3>
+                                <h3 className="text-xl font-bold tracking-tight text-slate-800 text-white tracking-tight">Yeni Duyuru Yayınla</h3>
                                 <p className="text-slate-400 text-xs font-medium mt-1">Tüm okula veya belirli bir sınıfa duyuru gönderin.</p>
                             </div>
                             <button onClick={() => setIsCreateModalOpen(false)} className="w-8 h-8 rounded-full bg-slate-700 text-slate-300 flex items-center justify-center hover:bg-slate-600 transition-colors">
@@ -269,7 +269,7 @@ export default function AnnouncementTab() {
                                             </button>
                                         )}
                                     </div>
-                                    <div className="flex flex-wrap gap-2 p-3 bg-slate-50 border border-slate-200 rounded-md max-h-32 overflow-y-auto">
+                                    <div className="flex flex-wrap gap-2 p-3 bg-transparent border border-white/40 rounded-md max-h-32 overflow-y-auto">
                                         {classrooms.map(cls => {
                                             const isSelected = selectedClassIds.includes(cls.id);
                                             return (
@@ -277,7 +277,7 @@ export default function AnnouncementTab() {
                                                     type="button"
                                                     key={cls.id}
                                                     onClick={() => toggleClassSelection(cls.id)}
-                                                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all border ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-blue-400'}`}
+                                                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all border ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-white text-slate-600 border-slate-300 hover:border-blue-400'}`}
                                                 >
                                                     {isSelected && <span className="mr-1">✓</span>}
                                                     {cls.name} Sınıfı
@@ -291,7 +291,7 @@ export default function AnnouncementTab() {
 
                                 <div>
                                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Duyuru Tipi *</label>
-                                    <select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer">
+                                    <select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="w-full bg-transparent border border-white/40 rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-blue-700 outline-none transition-all cursor-pointer">
                                         <option value="GENERAL">📢 Genel Duyuru</option>
                                         <option value="HOMEWORK">📚 Ödev</option>
                                         <option value="EXAM_INFO">📝 Sınav Bilgisi</option>
@@ -301,18 +301,18 @@ export default function AnnouncementTab() {
 
                                 <div>
                                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Duyuru Başlığı *</label>
-                                    <input required type="text" value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-3 text-slate-900 font-bold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="Örn: Yarınki Tören Hakkında" />
+                                    <input required type="text" value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full bg-transparent border border-white/40 rounded-md px-4 py-3 text-slate-900 font-bold focus:glass-panel focus:border-blue-700 outline-none transition-all placeholder:text-slate-400" placeholder="Örn: Yarınki Tören Hakkında" />
                                 </div>
 
                                 <div>
                                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Duyuru İçeriği *</label>
-                                    <textarea required rows={4} value={form.content} onChange={e => setForm({...form, content: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-3 text-slate-900 font-medium focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400 resize-none" placeholder="Mesajınızı detaylıca yazın..."></textarea>
+                                    <textarea required rows={4} value={form.content} onChange={e => setForm({...form, content: e.target.value})} className="w-full bg-transparent border border-white/40 rounded-md px-4 py-3 text-slate-900 font-medium focus:glass-panel focus:border-blue-700 outline-none transition-all placeholder:text-slate-400 resize-none" placeholder="Mesajınızı detaylıca yazın..."></textarea>
                                 </div>
 
                                 {/* 🚀 GÜNCELLEME: ÇOKLU DOSYA SEÇİCİ */}
                                 <div>
                                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Dosya Ekleri (Maks. 5)</label>
-                                    <div className="relative border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:bg-slate-50 transition-colors">
+                                    <div className="relative border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:bg-transparent transition-colors">
                                         <input type="file" multiple onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                                         <div className="pointer-events-none">
                                             <span className="text-3xl mb-2 block">📎</span>
@@ -322,12 +322,12 @@ export default function AnnouncementTab() {
                                     </div>
 
                                     {selectedFiles.length > 0 && (
-                                        <div className="mt-3 bg-slate-50 border border-slate-200 rounded-md p-3">
+                                        <div className="mt-3 bg-transparent border border-white/40 rounded-md p-3">
                                             <ul className="space-y-1">
                                                 {selectedFiles.map((file, index) => (
-                                                    <li key={index} className="flex items-center justify-between text-xs font-medium text-slate-700 bg-white border border-slate-100 px-2 py-1.5 rounded">
+                                                    <li key={index} className="flex items-center justify-between text-xs font-medium text-slate-700 glass-panel border border-slate-100 px-2 py-1.5 rounded">
                                                         <span className="truncate max-w-[80%] pl-1">{file.name}</span>
-                                                        <button type="button" onClick={() => removeSelectedFile(index)} className="text-red-500 hover:text-red-700 px-2 font-black">✕</button>
+                                                        <button type="button" onClick={() => removeSelectedFile(index)} className="text-red-500 hover:text-red-700 px-2 font-bold tracking-tight text-slate-800">✕</button>
                                                     </li>
                                                 ))}
                                             </ul>
@@ -339,11 +339,11 @@ export default function AnnouncementTab() {
                         </div>
 
                         {/* Modal Alt Butonlar */}
-                        <div className="bg-slate-50 p-6 border-t border-slate-100 flex justify-end gap-3 shrink-0">
-                            <button type="button" onClick={() => setIsCreateModalOpen(false)} className="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 px-6 py-2.5 rounded-md font-bold text-sm tracking-widest transition-all shadow-sm">
+                        <div className="bg-transparent p-6 border-t border-slate-100 flex justify-end gap-3 shrink-0">
+                            <button type="button" onClick={() => setIsCreateModalOpen(false)} className="glass-panel border border-slate-300 hover:bg-slate-100 text-slate-700 px-6 py-2.5 rounded-md font-bold text-sm tracking-widest transition-all shadow-lg">
                                 İPTAL
                             </button>
-                            <button type="submit" disabled={isSubmitting} form="announcementForm" className="bg-blue-700 hover:bg-blue-800 disabled:bg-slate-400 text-white px-8 py-2.5 rounded-md font-bold text-sm tracking-widest shadow-md transition-all">
+                            <button type="submit" disabled={isSubmitting} form="announcementForm" className="bg-blue-700 hover:bg-blue-800 disabled:bg-slate-400 text-white px-8 py-2.5 rounded-md font-bold text-sm tracking-widest shadow-lg transition-all">
                                 {isSubmitting ? 'YAYINLANIYOR...' : 'YAYINLA'}
                             </button>
                         </div>

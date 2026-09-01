@@ -1,3 +1,4 @@
+import { Edit3 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { showToast } from '../../utils/toast';
@@ -106,7 +107,7 @@ const ContactTab: React.FC = () => {
     if (loading) return <div className="text-center py-20 text-slate-400 font-medium animate-pulse">📡 İletişim paneli senkronize ediliyor...</div>;
 
     return (
-        <div className="animate-fade-in-down h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl flex flex-col">
+        <div className="animate-fade-in-down h-full bg-transparent p-6 md:p-8 rounded-tl-3xl flex flex-col">
             <div className="mb-6 flex justify-between items-end">
                 <div>
                     <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">İletişim ve Destek</h2>
@@ -116,15 +117,15 @@ const ContactTab: React.FC = () => {
                 </div>
                 <button
                     onClick={() => { setActiveFolder('COMPOSE'); setSelectedMessage(null); }}
-                    className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md font-bold shadow-md transition-all flex items-center gap-2 text-sm tracking-widest"
+                    className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-md font-bold shadow-lg transition-all flex items-center gap-2 text-sm tracking-widest"
                 >
-                    <span>✏️</span> YENİ MESAJ
+                    <Edit3 className="w-4 h-4" /> YENİ MESAJ
                 </button>
             </div>
 
-            <div className="flex-1 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col md:flex-row min-h-[500px]">
-                <div className="w-full md:w-1/3 border-r border-slate-200 flex flex-col bg-slate-50">
-                    <div className="flex border-b border-slate-200">
+            <div className="flex-1 glass-panel border border-white/40 rounded-xl shadow-lg overflow-hidden flex flex-col md:flex-row min-h-[500px]">
+                <div className="w-full md:w-1/3 border-r border-white/40 flex flex-col bg-transparent">
+                    <div className="flex border-b border-white/40">
                         <button onClick={() => { setActiveFolder('INBOX'); setSelectedMessage(null); }} className={`flex-1 py-4 text-sm font-bold border-b-2 transition-colors ${activeFolder === 'INBOX' ? 'border-blue-700 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500 hover:bg-slate-100'}`}>
                             Gelen Kutusu
                         </button>
@@ -138,9 +139,9 @@ const ContactTab: React.FC = () => {
                             <div className="p-10 text-center text-slate-400 font-medium text-sm">Bu klasör şu an boş.</div>
                         ) : (
                             filteredMessages.map(msg => (
-                                <div key={msg.id} onClick={() => handleReadMessage(msg)} className={`p-5 border-b border-slate-100 cursor-pointer transition-colors hover:bg-blue-50/50 ${selectedMessage?.id === msg.id ? 'bg-blue-50/80 border-l-4 border-l-blue-700' : 'border-l-4 border-l-transparent'} ${!msg.isRead && msg.type === 'INBOX' ? 'bg-white' : 'bg-transparent'}`}>
+                                <div key={msg.id} onClick={() => handleReadMessage(msg)} className={`p-5 border-b border-slate-100 cursor-pointer transition-colors hover:bg-blue-50/50 ${selectedMessage?.id === msg.id ? 'bg-blue-50/80 border-l-4 border-l-blue-700' : 'border-l-4 border-l-transparent'} ${!msg.isRead && msg.type === 'INBOX' ? 'glass-panel' : 'bg-transparent'}`}>
                                     <div className="flex justify-between items-start mb-1.5">
-                                        <h4 className={`text-sm truncate pr-2 ${!msg.isRead && msg.type === 'INBOX' ? 'font-black text-slate-900' : 'font-bold text-slate-700'}`}>
+                                        <h4 className={`text-sm truncate pr-2 ${!msg.isRead && msg.type === 'INBOX' ? 'font-bold tracking-tight text-slate-800 text-slate-900' : 'font-bold text-slate-700'}`}>
                                             {msg.sender}
                                         </h4>
                                         <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap">{msg.date}</span>
@@ -154,7 +155,7 @@ const ContactTab: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="w-full md:w-2/3 flex flex-col bg-white">
+                <div className="w-full md:w-2/3 flex flex-col glass-panel">
                     {activeFolder === 'COMPOSE' ? (
                         <div className="p-8 flex flex-col h-full animate-fade-in">
                             <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-4 mb-6 flex items-center gap-2">
@@ -164,7 +165,7 @@ const ContactTab: React.FC = () => {
                                 {isSuperAdmin ? (
                                     <div>
                                         <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Kime (Kurum/Yönetici Seçin) *</label>
-                                        <select required value={composeTo} onChange={e => setComposeTo(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-3 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none text-slate-700 transition-all cursor-pointer">
+                                        <select required value={composeTo} onChange={e => setComposeTo(e.target.value)} className="w-full bg-transparent border border-white/40 rounded-md px-4 py-3 text-sm font-semibold focus:glass-panel focus:border-blue-700 outline-none text-slate-700 transition-all cursor-pointer">
                                             <option value="" disabled>Alıcı seçiniz...</option>
                                             <option value="ALL">Tüm Kurum Yöneticileri (Genel Duyuru)</option>
                                             {recipients.map(admin => (
@@ -183,14 +184,14 @@ const ContactTab: React.FC = () => {
 
                                 <div>
                                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Konu *</label>
-                                    <input required type="text" value={composeSubject} onChange={e => setComposeSubject(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-3 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none text-slate-900 transition-all" placeholder="Mesajınızın konusu..." />
+                                    <input required type="text" value={composeSubject} onChange={e => setComposeSubject(e.target.value)} className="w-full bg-transparent border border-white/40 rounded-md px-4 py-3 text-sm font-semibold focus:glass-panel focus:border-blue-700 outline-none text-slate-900 transition-all" placeholder="Mesajınızın konusu..." />
                                 </div>
                                 <div className="flex-1 flex flex-col">
                                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Mesajınız *</label>
-                                    <textarea required value={composeContent} onChange={e => setComposeContent(e.target.value)} className="flex-1 w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-3 text-sm font-medium focus:bg-white focus:border-blue-700 outline-none text-slate-800 resize-none transition-all" placeholder="Mesajınızı detaylıca yazın..."></textarea>
+                                    <textarea required value={composeContent} onChange={e => setComposeContent(e.target.value)} className="flex-1 w-full bg-transparent border border-white/40 rounded-md px-4 py-3 text-sm font-medium focus:glass-panel focus:border-blue-700 outline-none text-slate-800 resize-none transition-all" placeholder="Mesajınızı detaylıca yazın..."></textarea>
                                 </div>
                                 <div className="flex justify-end pt-4 border-t border-slate-100">
-                                    <button type="submit" className="bg-blue-700 hover:bg-blue-800 text-white px-8 py-3 rounded-md font-bold text-sm tracking-widest shadow-md transition-all">GÖNDER</button>
+                                    <button type="submit" className="bg-blue-700 hover:bg-blue-800 text-white px-8 py-3 rounded-md font-bold text-sm tracking-widest shadow-lg transition-all">GÖNDER</button>
                                 </div>
                             </form>
                         </div>
@@ -198,10 +199,10 @@ const ContactTab: React.FC = () => {
                         <div className="p-8 flex flex-col h-full animate-fade-in">
                             <div className="border-b border-slate-100 pb-6 mb-6 flex justify-between items-start">
                                 <div>
-                                    <h3 className="text-xl font-black text-slate-900">{selectedMessage.subject}</h3>
+                                    <h3 className="text-xl font-bold tracking-tight text-slate-800 text-slate-900">{selectedMessage.subject}</h3>
                                     <div className="flex items-center gap-3 mt-4">
                                         {/* 🚀 ÇÖKME KORUMASI: Optional Chaining Eklendi */}
-                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-black text-sm">
+                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold tracking-tight text-slate-800 text-sm">
                                             {selectedMessage.sender?.charAt(0) || 'U'}
                                         </div>
                                         <div>
@@ -222,7 +223,7 @@ const ContactTab: React.FC = () => {
                             </div>
                         </div>
                     ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-slate-50/50">
+                        <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-transparent/50">
                             <span className="text-6xl mb-4 opacity-50">📫</span>
                             <p className="font-bold text-base text-slate-500">Okumak için listeden bir mesaj seçin</p>
                         </div>

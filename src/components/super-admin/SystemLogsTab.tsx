@@ -1,3 +1,4 @@
+import { Printer } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 
@@ -70,19 +71,19 @@ const SystemLogsTab: React.FC = () => {
     if (loading) return <div className="text-center py-20 text-slate-400 font-medium animate-pulse">📡 Sistem denetim kayıtları taranıyor...</div>;
 
     return (
-        <div className="animate-fade-in-down h-full bg-slate-50 p-6 md:p-8 rounded-tl-3xl flex flex-col">
+        <div className="animate-fade-in-down h-full bg-transparent p-6 md:p-8 rounded-tl-3xl flex flex-col">
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">Sistem Logları ve Denetim</h2>
                     <p className="text-slate-500 text-sm mt-1">Sistemdeki tüm hareketleri, güvenlik uyarılarını ve atamaları canlı olarak izleyin.</p>
                 </div>
-                <button onClick={() => window.print()} className="bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-5 py-2.5 rounded-md font-bold shadow-sm transition-all flex items-center gap-2 text-sm tracking-widest">
-                    <span>🖨️</span> RAPOR YAZDIR
+                <button onClick={() => window.print()} className="glass-panel hover:bg-transparent border border-slate-300 text-slate-700 px-5 py-2.5 rounded-md font-bold shadow-lg transition-all flex items-center gap-2 text-sm tracking-widest">
+                    <span><Printer className="w-4 h-4" /></span> RAPOR YAZDIR
                 </button>
             </div>
 
             {/* 🎛️ FİLTRE VE ARAMA ÇUBUĞU (Banka Teması) */}
-            <div className="bg-white p-4 rounded-md shadow-sm border border-slate-200 mb-6 flex flex-col sm:flex-row gap-4 flex-shrink-0">
+            <div className="glass-panel p-4 rounded-md shadow-lg border border-white/40 mb-6 flex flex-col sm:flex-row gap-4 flex-shrink-0">
                 <div className="flex-1 relative">
                     <span className="absolute left-4 top-3 text-slate-400">🔍</span>
                     <input
@@ -90,14 +91,14 @@ const SystemLogsTab: React.FC = () => {
                         placeholder="Kullanıcı, eylem veya IP adresi ara..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-md pl-11 pr-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all placeholder:text-slate-400"
+                        className="w-full bg-transparent border border-white/40 rounded-md pl-11 pr-4 py-2.5 text-sm font-semibold focus:glass-panel focus:border-blue-700 outline-none transition-all placeholder:text-slate-400"
                     />
                 </div>
                 <div className="w-full sm:w-56">
                     <select
                         value={typeFilter}
                         onChange={(e) => setTypeFilter(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-2.5 text-sm font-semibold focus:bg-white focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700"
+                        className="w-full bg-transparent border border-white/40 rounded-md px-4 py-2.5 text-sm font-semibold focus:glass-panel focus:border-blue-700 outline-none transition-all cursor-pointer text-slate-700"
                     >
                         <option value="ALL">Tüm Olay Türleri</option>
                         <option value="INFO">Bilgi (Info)</option>
@@ -109,11 +110,11 @@ const SystemLogsTab: React.FC = () => {
             </div>
 
             {/* 📊 TABLO EKRANI (Scrollable - Kaydırılabilir Ana Alan) */}
-            <div className="bg-white border border-slate-200 rounded-md shadow-sm flex-1 overflow-hidden flex flex-col">
+            <div className="glass-panel border border-white/40 rounded-md shadow-lg flex-1 overflow-hidden flex flex-col">
                 <div className="overflow-x-auto flex-1">
                     <table className="w-full text-left border-collapse">
-                        <thead className="sticky top-0 bg-slate-50 z-10">
-                        <tr className="border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider font-bold">
+                        <thead className="sticky top-0 bg-transparent z-10">
+                        <tr className="border-b border-white/40 text-slate-500 text-xs uppercase tracking-wider font-bold">
                             <th className="p-4 pl-6 whitespace-nowrap">Tarih & Saat</th>
                             <th className="p-4 whitespace-nowrap">Olay Türü</th>
                             <th className="p-4 whitespace-nowrap">Kullanıcı</th>
@@ -132,12 +133,12 @@ const SystemLogsTab: React.FC = () => {
                             </tr>
                         ) : (
                             filteredLogs.map((log) => (
-                                <tr key={log.id} className="hover:bg-slate-50/80 transition-colors">
+                                <tr key={log.id} className="hover:bg-transparent/80 transition-colors">
                                     <td className="p-4 pl-6 text-sm font-semibold text-slate-600 whitespace-nowrap">
                                         {log.timestamp}
                                     </td>
                                     <td className="p-4 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 rounded text-[10px] font-black uppercase border tracking-widest ${getBadgeStyle(log.type)}`}>
+                      <span className={`px-2.5 py-1 rounded text-[10px] font-bold tracking-tight text-slate-800 uppercase border tracking-widest ${getBadgeStyle(log.type)}`}>
                         {getBadgeLabel(log.type)}
                       </span>
                                     </td>

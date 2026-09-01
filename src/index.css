@@ -1,3 +1,93 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --primary: #0ea5e9;
+    --primary-600: #0284c7;
+    --on-primary: #ffffff;
+    --surface: #ffffff;
+    --muted: #64748b;
+    --danger: #ef4444;
+    --bg-base: #f8fafc;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased font-sans;
+  }
+}
+
+@layer components {
+  /* Premium Glassmorphic Surfaces */
+  .glass-panel {
+    @apply bg-white/80 backdrop-blur-xl border border-white/40 shadow-sm rounded-2xl;
+  }
+
+  .glass-card {
+    @apply bg-white/60 backdrop-blur-lg border border-white/50 shadow-sm hover:shadow-md transition-all duration-300 rounded-xl;
+  }
+
+  /* Semantic Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-xl shadow-sm hover:shadow-sky-500/20 hover:-translate-y-0.5 transition-all duration-200 focus:ring-2 focus:ring-sky-500/50 outline-none;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 font-medium rounded-xl border border-slate-200 shadow-sm hover:-translate-y-0.5 transition-all duration-200 focus:ring-2 focus:ring-slate-200 outline-none;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-xl shadow-sm hover:shadow-red-500/20 hover:-translate-y-0.5 transition-all duration-200 focus:ring-2 focus:ring-red-500/50 outline-none;
+  }
+  
+  .btn-icon {
+    @apply p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors;
+  }
+
+  /* Premium Inputs */
+  .input-field {
+    @apply w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 outline-none transition-all duration-200 text-slate-700 placeholder-slate-400 shadow-sm;
+  }
+
+  /* Typography extensions */
+  .heading-lg {
+    @apply text-2xl md:text-3xl font-bold tracking-tight text-slate-900;
+  }
+  .heading-md {
+    @apply text-xl font-semibold tracking-tight text-slate-800;
+  }
+  .text-subtle {
+    @apply text-sm text-slate-500 font-medium;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+}
+
+/* Theme variations for specific roles */
+.theme-student {
+  --primary: #0d9488;
+  --primary-600: #0f766e;
+}
+.theme-teacher {
+  --primary: #4f46e5;
+  --primary-600: #4338ca;
+}
+.theme-parent {
+  --primary: #9333ea;
+  --primary-600: #7e22ce;
+}
+.theme-admin {
+  --primary: #0369a1;
+  --primary-600: #075985;
+}
