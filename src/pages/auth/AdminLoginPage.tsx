@@ -17,7 +17,7 @@ const AdminLoginPage: React.FC = () => {
             const response = await api.post('/auth/login', {
                 username: username,
                 password: password
-            });
+            }, { headers: { 'X-Skip-Auth-Redirect': '1' } });
 
             const token = response.data.token;
             const role = response.data.role;

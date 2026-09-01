@@ -35,6 +35,13 @@ api.interceptors.response.use(
     (error) => {
         // Eğer makine dairesi 401 (Yetkisiz - Biletin süresi dolmuş) fırlatırsa
         if (error.response && error.response.status === 401) {
+            // If the request asked to skip global redirect (e.g., login attempts), do not redirect here
+            const req = error.config || {};
+            const skipRedirect = req.headers && (req.headers['X-Skip-Auth-Redirect'] || req.headers['x-skip-auth-redirect']);
+            if (skipRedirect) {
+                return Promise.reject(error);
+            }
+
             console.warn("Biletin süresi dolmuş veya yetkisiz erişim tespit edildi. Çıkış yapılıyor...");
 
             // Çürük bileti ve sicil kayıtlarını temizle

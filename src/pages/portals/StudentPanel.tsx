@@ -1,48 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { api, API_BASE } from '../../services/api'; // 🚀 GÜNCELLEME: API_BASE import edildi
+import { api, API_BASE } from '../../services/api';
 import { showToast } from '../../utils/toast';
-
-interface StudentProfile {
-    id: number;
-    firstName: string;
-    lastName: string;
-    schoolNumber: string;
-    parentFullName: string;
-    username: string;
-    grade: string;
-    gender: string;
-    phone: string;
-    email: string;
-}
-
-interface AnnouncementFile {
-    fileName: string;
-    fileUrl: string;
-}
-
-interface Announcement {
-    id: number;
-    title: string;
-    content: string;
-    createdDate: string;
-    authorName: string;
-    type: string;
-    targetClasses: string[];
-    attachedFiles?: AnnouncementFile[];
-}
-
-interface Message {
-    id: number;
-    subject: string;
-    content: string;
-    date: string;
-    time: string;
-    isRead: boolean;
-    type: 'INBOX' | 'SENT';
-    sender: string;
-    isSentByParent?: boolean;
-}
+import { useStudentProfile } from '../../hooks/useProfile';
+import { useAnnouncements } from '../../hooks/useAnnouncements';
+import { useMessages } from '../../hooks/useMessages';
+import { useUserSearch } from '../../hooks/useUserSearch';
+import type { SearchUser } from '../../hooks/useUserSearch';
+import type { Announcement, Message } from '../../types/panelTypes';
 
 type ProfileViewMode = 'overview' | 'editPersonal' | 'editEmail' | 'editPhone' | 'editPassword';
 
@@ -54,19 +19,20 @@ export default function StudentPanel() {
     const studentSchoolNumber = location.state?.studentSchoolNumber;
 
     const [activeTab, setActiveTab] = useState('overview');
-    const [profile, setProfile] = useState<StudentProfile | null>(null);
-    const [loading, setLoading] = useState(true);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-    const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+    const fetchUrl = isParentViewing && studentSchoolNumber ? `/students/number/${studentSchoolNumber}` : null;
+    const { profile, loading: profileLoading, refresh: refreshProfile } = useStudentProfile(fetchUrl);
 
+    const { announcements: rawAnnouncements, loading: announcementsLoading, fetchAll: fetchAnnouncements } = useAnnouncements();
+    const { messages, loading: messagesLoading, fetchAll: fetchMessages, send: sendMessage, markRead } = useMessages();
+
+    const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [announcementSearch, setAnnouncementSearch] = useState('');
     const [announcementTypeFilter, setAnnouncementTypeFilter] = useState('ALL');
     const [announcementSort, setAnnouncementSort] = useState('NEWEST');
 
-    const [messages, setMessages] = useState<Message[]>([]);
     const [mailBoxView, setMailBoxView] = useState<'INBOX' | 'SENT'>('INBOX');
     const [rightPaneMode, setRightPaneMode] = useState<'EMPTY' | 'READ' | 'COMPOSE'>('EMPTY');
     const [msgReceiverId, setMsgReceiverId] = useState('');
@@ -75,21 +41,28 @@ export default function StudentPanel() {
     const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
 
     const [userSearchQuery, setUserSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState<{userId: number, fullName: string, role: string}[]>([]);
+    const { results: searchResults, visible: searchVisible } = useUserSearch(userSearchQuery);
     const [showSearchDropdown, setShowSearchDropdown] = useState(false);
     const [selectedReceiverName, setSelectedReceiverName] = useState('');
 
     const [profileViewMode, setProfileViewMode] = useState<ProfileViewMode>('overview');
     const [updateForm, setUpdateForm] = useState({
-        firstName: '', lastName: '', email: '', phone: '', currentPassword: '', newPassword: ''
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        currentPassword: '',
+        newPassword: ''
     });
+
+    const loading = profileLoading || announcementsLoading || messagesLoading;
 
     const isNotHome = activeTab !== 'overview' || profileViewMode !== 'overview' || rightPaneMode !== 'EMPTY' || selectedAnnouncement !== null;
     const isNotHomeRef = useRef(isNotHome);
 
     useEffect(() => {
-        window.history.replaceState({ page: 'base' }, "", window.location.href);
-        window.history.pushState({ page: 'trap' }, "", window.location.href);
+        window.history.replaceState({ page: 'base' }, '', window.location.href);
+        window.history.pushState({ page: 'trap' }, '', window.location.href);
 
         const handlePopState = () => {
             if (isNotHomeRef.current) {
@@ -99,7 +72,7 @@ export default function StudentPanel() {
                 setSelectedAnnouncement(null);
             } else {
                 setShowLogoutModal(true);
-                window.history.pushState({ page: 'trap' }, "", window.location.href);
+                window.history.pushState({ page: 'trap' }, '', window.location.href);
             }
         };
 
@@ -109,81 +82,36 @@ export default function StudentPanel() {
 
     useEffect(() => {
         if (isNotHome && !isNotHomeRef.current) {
-            window.history.pushState({ page: 'subpage' }, "", window.location.href);
+            window.history.pushState({ page: 'subpage' }, '', window.location.href);
         }
         isNotHomeRef.current = isNotHome;
     }, [isNotHome]);
 
+    useEffect(() => {
+        setShowSearchDropdown(searchVisible);
+    }, [searchVisible]);
 
     useEffect(() => {
-        fetchInitialData();
-    }, []);
+        if (!profile) return;
 
-    useEffect(() => {
-        const delayDebounceFn = setTimeout(async () => {
-            if (userSearchQuery.length >= 2) {
-                try {
-                    const res = await api.get(`/messages/search-users?keyword=${userSearchQuery}`);
-                    setSearchResults(res.data);
-                    setShowSearchDropdown(true);
-                } catch (error) {
-                    console.error("Arama hatası", error);
-                }
-            } else {
-                setSearchResults([]);
-                setShowSearchDropdown(false);
-            }
-        }, 400);
-
-        return () => clearTimeout(delayDebounceFn);
-    }, [userSearchQuery]);
+        setUpdateForm(prev => ({
+            ...prev,
+            firstName: profile.firstName || '',
+            lastName: profile.lastName || '',
+            email: profile.email || '',
+            phone: profile.phone || ''
+        }));
+    }, [profile]);
 
     const fetchInitialData = async () => {
-        try {
-            let profileRes;
-            if (isParentViewing && studentSchoolNumber) {
-                profileRes = await api.get(`/students/number/${studentSchoolNumber}`);
-            } else {
-                profileRes = await api.get('/students/me');
-            }
-            setProfile(profileRes.data);
-
-            setUpdateForm(prev => ({
-                ...prev,
-                firstName: profileRes.data.firstName,
-                lastName: profileRes.data.lastName,
-                email: profileRes.data.email || '',
-                phone: profileRes.data.phone || ''
-            }));
-
-            const annRes = await api.get('/announcements');
-            const filteredAnnouncements = annRes.data.filter((ann: Announcement) => {
-                if (!ann.targetClasses || ann.targetClasses.length === 0) return true;
-                return ann.targetClasses.includes("Genel Duyuru") || ann.targetClasses.includes(profileRes.data.grade);
-            });
-
-            setAnnouncements(filteredAnnouncements);
-
-            await fetchMessages();
-        } catch (err) {
-            console.error("Veriler çekilemedi:", err);
-            showToast("Bilgiler yüklenirken bir hata oluştu.", "error");
-        } finally {
-            setLoading(false);
-        }
+        await Promise.all([
+            refreshProfile(),
+            fetchAnnouncements(),
+            fetchMessages()
+        ]);
     };
 
-    const fetchMessages = async () => {
-        try {
-            const msgRes = await api.get('/messages');
-            setMessages(msgRes.data);
-        } catch (error) {
-            console.error("Mesajlar çekilemedi", error);
-        }
-    };
-
-    // 🚀 TİP GÜVENLİĞİ EKLENDİ (any kaldırıldı)
-    const handleSelectUser = (user: {userId: number, fullName: string, role: string}) => {
+    const handleSelectUser = (user: SearchUser) => {
         setMsgReceiverId(user.userId.toString());
         setSelectedReceiverName(`${user.fullName} (${user.role})`);
         setShowSearchDropdown(false);
@@ -192,12 +120,14 @@ export default function StudentPanel() {
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
+
         if (!msgReceiverId) {
             showToast('Lütfen listeden bir alıcı seçin.', 'error');
             return;
         }
+
         try {
-            await api.post('/messages', {
+            await sendMessage({
                 receiverId: msgReceiverId,
                 subject: msgSubject,
                 content: msgContent
@@ -210,11 +140,8 @@ export default function StudentPanel() {
             setMsgSubject('');
             setMsgContent('');
             setRightPaneMode('EMPTY');
-
-            await fetchMessages();
             setMailBoxView('SENT');
-
-        } catch (error) {
+        } catch {
             showToast('Mesaj gönderilemedi.', 'error');
         }
     };
@@ -222,18 +149,15 @@ export default function StudentPanel() {
     const handleReadMessage = async (msg: Message) => {
         setSelectedMessage(msg);
         setRightPaneMode('READ');
+
         if (msg.type === 'INBOX' && !msg.isRead) {
-            try {
-                await api.put(`/messages/${msg.id}/read`);
-                setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isRead: true } : m));
-            } catch (error) {
-                console.error("Okundu işaretlenemedi", error);
-            }
+            await markRead(msg.id);
         }
     };
 
     const handleProfileUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
+
         if (isParentViewing) {
             showToast('Öğrenci bilgileri veli yetkisiyle güncellenemez.', 'error');
             return;
@@ -245,19 +169,24 @@ export default function StudentPanel() {
                     showToast('Lütfen mevcut ve yeni şifrenizi girin.', 'error');
                     return;
                 }
-                await api.put('/users/me', { password: updateForm.newPassword, currentPassword: updateForm.currentPassword });
+                await api.put('/users/me', {
+                    password: updateForm.newPassword,
+                    currentPassword: updateForm.currentPassword
+                });
             } else {
-                const payload: Record<string, string> = {
-                    firstName: updateForm.firstName, lastName: updateForm.lastName, email: updateForm.email, phone: updateForm.phone
-                };
-                await api.put('/users/me', payload);
+                await api.put('/users/me', {
+                    firstName: updateForm.firstName,
+                    lastName: updateForm.lastName,
+                    email: updateForm.email,
+                    phone: updateForm.phone
+                });
             }
 
             showToast('Profil bilgileriniz başarıyla güncellendi.', 'success');
             setProfileViewMode('overview');
             setUpdateForm(prev => ({ ...prev, newPassword: '', currentPassword: '' }));
             await fetchInitialData();
-        } catch (error) {
+        } catch {
             showToast('Profil güncellenemedi.', 'error');
         }
     };
@@ -290,27 +219,30 @@ export default function StudentPanel() {
         }
     };
 
-    const processedAnnouncements = announcements
-        .filter(ann => {
-            const matchesSearch = ann.title.toLowerCase().includes(announcementSearch.toLowerCase()) ||
-                ann.content.toLowerCase().includes(announcementSearch.toLowerCase()) ||
-                ann.authorName.toLowerCase().includes(announcementSearch.toLowerCase());
-            const matchesType = announcementTypeFilter === 'ALL' || ann.type === announcementTypeFilter;
-            return matchesSearch && matchesType;
-        })
-        .sort((a, b) => {
-            const timeA = new Date(a.createdDate).getTime();
-            const timeB = new Date(b.createdDate).getTime();
-            return announcementSort === 'NEWEST' ? timeB - timeA : timeA - timeB;
-        });
+    const announcements = rawAnnouncements.filter(ann => {
+        const matchesClass = !profile?.grade || !ann.targetClasses?.length
+            ? true
+            : ann.targetClasses.includes('Genel Duyuru') || ann.targetClasses.includes(profile.grade);
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-indigo-600 font-bold animate-pulse text-xl">Öğrenci Paneli Hazırlanıyor...</div>;
+        const matchesSearch =
+            ann.title.toLowerCase().includes(announcementSearch.toLowerCase()) ||
+            ann.content.toLowerCase().includes(announcementSearch.toLowerCase()) ||
+            ann.authorName.toLowerCase().includes(announcementSearch.toLowerCase());
+
+        const matchesType = announcementTypeFilter === 'ALL' || ann.type === announcementTypeFilter;
+        return matchesClass && matchesSearch && matchesType;
+    }).sort((a, b) => {
+        const timeA = new Date(a.createdDate).getTime();
+        const timeB = new Date(b.createdDate).getTime();
+        return announcementSort === 'NEWEST' ? timeB - timeA : timeA - timeB;
+    });
 
     const displayedMessages = messages.filter(m => m.type === mailBoxView);
     const unreadCount = messages.filter(m => m.type === 'INBOX' && !m.isRead).length;
 
-    return (
-        <div className="min-h-screen bg-slate-50 text-slate-800 flex font-sans selection:bg-indigo-500/30">
+    if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-indigo-600 font-bold animate-pulse text-xl">Öğrenci Paneli Hazırlanıyor...</div>;
+
+    return ( <div className="min-h-screen bg-slate-50 text-slate-800 flex font-sans selection:bg-indigo-500/30">
 
             <aside className="w-72 bg-white border-r border-slate-200 flex flex-col shadow-sm z-10 shrink-0">
                 <div onClick={() => { setActiveTab('overview'); setProfileViewMode('overview'); setSelectedAnnouncement(null); }} className="p-8 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors group">
@@ -480,7 +412,6 @@ export default function StudentPanel() {
                                         </div>
                                         <div className="prose max-w-none text-slate-600 font-medium leading-relaxed whitespace-pre-wrap text-lg">{selectedAnnouncement.content}</div>
 
-                                        {/* 🚀 BUG FIX: Hardcoded URL yerine dinamik API_BASE kullanıldı */}
                                         {selectedAnnouncement.attachedFiles && selectedAnnouncement.attachedFiles.length > 0 && (
                                             <div className="mt-12 pt-8 border-t border-slate-100 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
                                                 <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"><span>📎</span> Ekli Dosyalar ({selectedAnnouncement.attachedFiles.length})</h4>
@@ -535,14 +466,14 @@ export default function StudentPanel() {
                                             </div>
                                         </div>
 
-                                        {processedAnnouncements.length === 0 ? (
+                                        {announcements.length === 0 ? (
                                             <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-sm">
                                                 <div className="text-5xl mb-4">📭</div>
                                                 <h4 className="text-lg font-bold text-slate-700">Duyuru bulunamadı</h4>
                                                 <p className="text-sm text-slate-500 mt-2">Arama kriterlerinize uyan bir içerik yok.</p>
                                             </div>
                                         ) : (
-                                            processedAnnouncements.map((ann) => (
+                                            announcements.map((ann) => (
                                                 <div key={ann.id} onClick={() => setSelectedAnnouncement(ann)} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer relative overflow-hidden group hover:-translate-y-1">
                                                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${ann.type === 'HOMEWORK' ? 'bg-orange-400' : ann.type === 'EXAM_INFO' ? 'bg-red-400' : ann.type === 'EVENT' ? 'bg-purple-400' : 'bg-blue-400'}`}></div>
                                                     <div className="flex justify-between items-start mb-4">
@@ -574,7 +505,6 @@ export default function StudentPanel() {
                                         )}
                                     </div>
 
-                                    {/* Sağ Taraftaki Profil Kartı */}
                                     <div className="flex-1">
                                         <div className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden sticky top-6">
                                             <div className="bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 p-8 text-white relative flex flex-col items-center">
@@ -728,7 +658,7 @@ export default function StudentPanel() {
                                                                 <div className="relative">
                                                                     {showSearchDropdown && searchResults.length > 0 && (
                                                                         <div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in-down">
-                                                                            {searchResults.map((user: any) => (
+                                                                            {searchResults.map((user: SearchUser) => (
                                                                                 <div key={user.userId} onClick={() => handleSelectUser(user)} className="px-5 py-3 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between transition-colors">
                                                                                     <p className="text-sm font-bold text-slate-800">{user.fullName}</p>
                                                                                     <p className="text-[10px] font-black text-indigo-600 bg-indigo-100 px-2 py-1 rounded uppercase tracking-widest">{user.role}</p>
@@ -955,7 +885,6 @@ export default function StudentPanel() {
                 </div>
             </main>
 
-            {/* 🚨 ÇIKIŞ ONAY PENCERESİ */}
             {showLogoutModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md animate-fade-in">
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 border border-slate-200 relative animate-scale-in z-50 text-center">
