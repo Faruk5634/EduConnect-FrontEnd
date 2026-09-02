@@ -1,19 +1,43 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../services/api';
-import { GraduationCap, UserCircle2, Users, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { GraduationCap, Users, BookOpen, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
+import parentIllustration from '../../assets/parent_transparent_v4.png';
+import studentIllustration from '../../assets/student_transparent.png';
+import teacherIllustration from '../../assets/teacher_transparent.png';/* ─── Per-role theme ─────────────────────────────────────────────────────── */
+interface RoleTheme {
+    icon: React.ReactNode;
+    iconColor: string;
+    leftBg: string;
+    btn: string;
+}
+
+const THEMES: Record<string, RoleTheme> = {
+    parent: {
+        icon: <Users className="w-8 h-8" />,
+        iconColor: 'text-amber-500',
+        leftBg: 'bg-gradient-to-b from-[#f59e0b] to-[#d97706]',
+        btn: 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600',
+    },
+    student: {
+        icon: <GraduationCap className="w-8 h-8" />,
+        iconColor: 'text-sky-500',
+        leftBg: 'bg-gradient-to-b from-[#0ea5e9] to-[#0284c7]',
+        btn: 'bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700',
+    },
+    teacher: {
+        icon: <BookOpen className="w-8 h-8" />,
+        iconColor: 'text-teal-500',
+        leftBg: 'bg-gradient-to-b from-[#14b8a6] to-[#0f766e]',
+        btn: 'bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700',
+    },
+};
 
 const LoginPage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
-
     const { roleId = 'student', roleTitle = 'Öğrenci' } = location.state || {};
-
-    const getRoleIcon = () => {
-        if (roleId === 'student') return <GraduationCap className="w-12 h-12 text-sky-500" />;
-        if (roleId === 'teacher') return <UserCircle2 className="w-12 h-12 text-indigo-500" />;
-        return <Users className="w-12 h-12 text-purple-500" />;
-    };
+    const theme = THEMES[roleId] ?? THEMES.student;
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -24,151 +48,178 @@ const LoginPage: React.FC = () => {
         e.preventDefault();
         setError('');
         setIsLoading(true);
-
         try {
-            const response = await api.post('/auth/login', {
-                username: username,
-                password: password
-            }, { headers: { 'X-Skip-Auth-Redirect': '1' } });
-
-            const token = response.data.token;
-            const role = response.data.role;
-            const resUsername = response.data.username;
-
-            if (role === 'ROLE_SUPER_ADMIN' || role === 'ROLE_ADMIN' || role === 'ROLE_VICE_ADMIN') {
-                setError("Bu portal sadece kampüs kullanıcıları içindir. Lütfen Yönetici Portalı'nı kullanın.");
-                setIsLoading(false);
-                return;
+            const res = await api.post('/auth/login', { username, password }, { headers: { 'X-Skip-Auth-Redirect': '1' } });
+            const { token, role, username: resUser } = res.data;
+            if (['ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_VICE_ADMIN'].includes(role)) {
+                setError("Bu portal sadece kampüs kullanıcıları içindir.");
+                setIsLoading(false); return;
             }
-
-            let expectedRole = '';
-            if (roleId === 'student') expectedRole = 'ROLE_STUDENT';
-            else if (roleId === 'teacher') expectedRole = 'ROLE_TEACHER';
-            else if (roleId === 'parent') expectedRole = 'ROLE_PARENT';
-
-            if (role !== expectedRole) {
-                setError(`Hatalı Giriş! Bu ekrandan sadece ${roleTitle} yetkisine sahip kişiler giriş yapabilir.`);
-                setIsLoading(false);
-                return;
+            const expected: Record<string, string> = { student: 'ROLE_STUDENT', teacher: 'ROLE_TEACHER', parent: 'ROLE_PARENT' };
+            if (role !== expected[roleId]) {
+                setError(`Sadece ${roleTitle} yetkisine sahip kişiler giriş yapabilir.`);
+                setIsLoading(false); return;
             }
-
             localStorage.setItem('token', token);
             localStorage.setItem('role', role);
-            localStorage.setItem('username', resUsername);
-
-            if (role === 'ROLE_TEACHER') {
-                navigate('/teacher');
-            } else if (role === 'ROLE_PARENT') {
-                navigate('/parent');
-            } else if (role === 'ROLE_STUDENT') {
-                navigate('/student');
-            } else {
-                navigate('/');
-            }
-
-        } catch (err) {
-            setError('Giriş başarısız! Lütfen kullanıcı adı ve şifrenizi kontrol ediniz.');
+            localStorage.setItem('username', resUser);
+            if (role === 'ROLE_TEACHER') navigate('/teacher');
+            else if (role === 'ROLE_PARENT') navigate('/parent');
+            else if (role === 'ROLE_STUDENT') navigate('/student');
+            else navigate('/');
+        } catch {
+            setError('Giriş başarısız! Lütfen bilgilerinizi kontrol ediniz.');
             setIsLoading(false);
         }
     };
 
-    return (
-        <div className="min-h-screen bg-transparent flex items-center justify-center p-6 relative overflow-hidden">
-            {/* Ambient Background Elements */}
-            <div className="absolute top-[-20%] left-[-10%] w-[800px] h-[800px] bg-sky-200/50 rounded-full blur-[120px] pointer-events-none mix-blend-multiply"></div>
-            <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-indigo-200/50 rounded-full blur-[100px] pointer-events-none mix-blend-multiply"></div>
+    const iconBgMap: Record<string, string> = {
+        parent: 'bg-amber-50 text-amber-500',
+        student: 'bg-sky-50 text-sky-500',
+        teacher: 'bg-teal-50 text-teal-500',
+    };
+    const iconBg = iconBgMap[roleId] ?? iconBgMap.student;
 
-            <div className="w-full max-w-5xl flex flex-col md:flex-row glass-panel/80 backdrop-blur-2xl rounded-[2.5rem] shadow-xl border border-white overflow-hidden z-10 animate-slide-up">
-                {/* Left Side: Branding/Graphic */}
-                <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-sky-500 to-indigo-600 p-12 flex-col justify-between relative overflow-hidden text-white">
-                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-                    <div className="relative z-10">
-                        <div className="w-12 h-12 glass-panel/20 backdrop-blur-md rounded-xl flex items-center justify-center mb-6 border border-white/30">
-                            <GraduationCap className="w-6 h-6 text-white" />
-                        </div>
-                        <h1 className="text-4xl font-bold mb-4 leading-tight">Geleceğin Eğitimi <br/>EduConnect ile Başlıyor.</h1>
-                        <p className="text-white/80 text-lg">Öğrenci, öğretmen ve veli deneyimini kusursuzlaştıran yeni nesil eğitim platformu.</p>
+    return (
+        <div className="min-h-screen w-full flex bg-white font-sans overflow-hidden">
+
+            {/* ══ LEFT PANEL (40%) ══ */}
+            <div className={`hidden lg:flex flex-col relative w-[40%] ${theme.leftBg}`}>
+                {/* Subtle texture */}
+                <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+
+                {/* Logo */}
+                <div className="absolute top-12 left-12 z-20 flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center">
+                        <GraduationCap className="w-6 h-6 text-white" />
                     </div>
-                    <div className="relative z-10">
-                        <div className="flex items-center space-x-[-10px]">
-                            <div className="w-10 h-10 rounded-full border-2 border-indigo-600 bg-sky-200"></div>
-                            <div className="w-10 h-10 rounded-full border-2 border-indigo-600 bg-indigo-200"></div>
-                            <div className="w-10 h-10 rounded-full border-2 border-indigo-600 bg-purple-200"></div>
-                            <div className="w-10 h-10 rounded-full border-2 border-indigo-600 glass-panel flex items-center justify-center text-xs font-bold text-indigo-600">+2k</div>
-                        </div>
-                        <p className="mt-3 text-sm text-white/80 font-medium">Binlerce kullanıcıya katılın</p>
-                    </div>
+                    <span className="text-white text-2xl font-black tracking-tight">EduConnect</span>
                 </div>
 
-                {/* Right Side: Login Form */}
-                <div className="w-full md:w-1/2 p-8 md:p-16 flex flex-col justify-center glass-panel relative">
-                    <div className="mb-10 text-center md:text-left">
-                        <div className="inline-flex items-center justify-center p-3 bg-sky-50 rounded-2xl mb-4 text-sky-600 md:hidden">
-                            {getRoleIcon()}
+                {/* Unified Content Block (Text + Image) Centered */}
+                {/* FIX: Removed z-10 from here so it doesn't create a stacking context, blocking mix-blend-multiply */}
+                <div className="relative flex-1 flex flex-col justify-center items-center px-12 pt-24">
+                    <div className="w-full max-w-[440px] flex flex-col gap-6">
+
+                        {/* Text Content */}
+                        <div>
+                            <h1 className="text-white text-[2.5rem] leading-[1.15] font-black tracking-tight mb-4 drop-shadow-sm">
+                                Geleceğin Eğitimi<br />EduConnect ile<br />Başlıyor.
+                            </h1>
+                            <p className="text-white/80 text-[15px] font-medium leading-relaxed">
+                                Öğrenci, öğretmen ve veli deneyimini kusursuzlaştıran yeni nesil eğitim platformu.
+                            </p>
                         </div>
-                        <div className="hidden md:inline-flex items-center justify-center p-4 bg-transparent rounded-2xl mb-6 shadow-lg border border-slate-100">
-                            {getRoleIcon()}
+
+                        {/* Transparent Illustration with Glassmorphism Wrapper */}
+                        <div className="relative p-6 sm:p-10 rounded-[2.5rem] border border-white/10 bg-white/5 backdrop-blur-sm shadow-2xl shadow-orange-900/10">
+                            
+                            <div className="relative w-full max-w-[480px] aspect-square pointer-events-none z-10 mx-auto">
+                                <img 
+                                    src={
+                                        roleId === 'parent' ? parentIllustration :
+                                        roleId === 'teacher' ? teacherIllustration :
+                                        studentIllustration
+                                    }
+                                    alt="Portal Illustration" 
+                                    className="absolute inset-0 w-full h-full object-contain select-none drop-shadow-xl"
+                                />
+                                
+                                {roleId === 'parent' && (
+                                    <>
+                                        {/* CSS Overlays for precise text without ruining the image */}
+                                        {/* Phone Screen Text */}
+                                        <div className="absolute flex items-center justify-center" style={{ top: '48%', left: '48.5%', transform: 'translate(-50%, -50%) rotate(-15deg)' }}>
+                                            <span className="text-[7px] sm:text-[9px] font-black text-sky-900 tracking-tighter opacity-80">EduConnect</span>
+                                        </div>
+
+                                        {/* Books Text */}
+                                        <div className="absolute flex flex-col items-center gap-[4px] sm:gap-[6px]" style={{ top: '68%', left: '58.5%', transform: 'translate(-50%, -50%) rotate(-4deg)' }}>
+                                            <span className="text-[4.5px] sm:text-[6px] font-bold text-slate-800 opacity-90">MATEMATİK</span>
+                                            <span className="text-[4.5px] sm:text-[6px] font-bold text-white opacity-90">SOSYAL</span>
+                                            <span className="text-[4.5px] sm:text-[6px] font-bold text-white opacity-90">İNGİLİZCE</span>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
-                        <h2 className="text-3xl font-bold text-slate-900 mb-2">{roleTitle} Girişi</h2>
-                        <p className="text-slate-500 font-medium">Hesabınıza giriş yaparak devam edin</p>
+
+                    </div>
+                </div>
+            </div>
+
+            {/* ══ RIGHT PANEL (60%) ══ */}
+            <div className="flex-1 lg:w-[60%] flex items-center justify-center relative bg-[#FDFDFD]">
+
+                {/* Ambient glow */}
+                <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] bg-amber-500/5 blur-[120px] rounded-full pointer-events-none" />
+
+                {/* Form Area - Centered, Clean */}
+                <div className="relative z-10 w-full max-w-[420px] bg-white rounded-3xl p-10 sm:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/50">
+
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${iconBg}`}>
+                        {theme.icon}
                     </div>
 
-                    <form onSubmit={handleLogin} className="space-y-6">
+                    <h2 className="text-3xl font-black text-slate-800 tracking-tight mb-2">
+                        {roleTitle} Girişi
+                    </h2>
+                    <p className="text-slate-500 text-sm font-medium mb-8">
+                        Hesabınıza giriş yaparak devam edin
+                    </p>
+
+                    <form onSubmit={handleLogin} className="space-y-5">
                         {error && (
-                            <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm font-medium animate-fade-in flex items-start">
-                                <span className="mr-2"><AlertTriangle className="w-4 h-4 inline-block mr-2" /></span>
+                            <div className="flex items-start gap-2 bg-red-50 text-red-600 px-4 py-3 rounded-xl text-xs font-medium">
+                                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
                                 {error}
                             </div>
                         )}
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-slate-700 text-sm font-semibold mb-2">Kullanıcı Adı</label>
-                                <input
-                                    type="text"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    className="input-field"
-                                    placeholder="Kullanıcı adınızı girin"
-                                    required
-                                />
-                            </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-slate-400 tracking-widest uppercase ml-1">Kullanıcı Adı</label>
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={e => setUsername(e.target.value)}
+                                placeholder="Kullanıcı adınızı girin"
+                                required
+                                className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-none text-slate-800 placeholder-slate-400 text-sm focus:ring-2 focus:ring-amber-200 transition-all outline-none"
+                            />
+                        </div>
 
-                            <div>
-                                <label className="block text-slate-700 text-sm font-semibold mb-2">Şifre</label>
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="input-field"
-                                    placeholder="••••••••"
-                                    required
-                                />
-                            </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-slate-400 tracking-widest uppercase ml-1">Şifre</label>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                                required
+                                className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border-none text-slate-800 placeholder-slate-400 text-sm focus:ring-2 focus:ring-amber-200 transition-all outline-none"
+                            />
                         </div>
 
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="btn-primary w-full py-3.5 text-base shadow-sky-500/25 mt-2"
+                            className={`w-full py-4 rounded-2xl font-bold text-white mt-4 flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed ${theme.btn}`}
                         >
-                            {isLoading ? (
-                                <><Loader2 className="w-5 h-5 animate-spin" /> Giriş Yapılıyor...</>
-                            ) : (
-                                'Giriş Yap'
-                            )}
+                            {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> Giriş Yapılıyor...</> : 'Giriş Yap'}
                         </button>
                     </form>
 
-                    <div className="mt-8 text-center pt-6 border-t border-slate-100">
+                    <div className="mt-8 flex justify-center">
                         <button
                             onClick={() => navigate('/campus')}
-                            className="inline-flex items-center justify-center text-slate-500 hover:text-sky-600 font-medium transition-colors gap-2"
+                            className="flex items-center gap-2 text-slate-400 hover:text-slate-600 text-sm font-medium transition-colors"
                         >
-                            <ArrowLeft className="w-4 h-4" /> Meydana Geri Dön
+                            <ArrowLeft className="w-4 h-4" />
+                            Ana Ekrana Dön
                         </button>
                     </div>
                 </div>
+
             </div>
         </div>
     );
