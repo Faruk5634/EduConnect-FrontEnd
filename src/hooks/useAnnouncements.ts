@@ -22,8 +22,22 @@ export function useAnnouncements() {
   const create = useCallback(async (formData: FormData) => {
     try {
       await api.post('/announcements/create', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      showToast('Duyuru başarıyla yayınlandı!', 'success');
       await fetchAll();
-    } catch (err) { console.error(err); showToast('Duyuru oluşturulamadı','error'); throw err; }
+    } catch (err: any) {
+      // HTTP 500 is typically a file storage / SecurityException on the backend
+      if (err?.response?.status === 500) {
+        showToast(
+          'Duyuru oluşturulurken bir hata oluştu. Lütfen dosya isimlerini kontrol edin (özel karakter veya çok uzun isim olabilir).',
+          'error'
+        );
+      } else if (err?.response?.status === 413) {
+        showToast('Dosya boyutu çok büyük! Lütfen daha küçük dosyalar seçin.', 'error');
+      } else {
+        showToast('Duyuru oluşturulamadı. Lütfen tekrar deneyin.', 'error');
+      }
+      throw err;
+    }
   }, [fetchAll]);
 
   const remove = useCallback(async (id: number) => {

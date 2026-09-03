@@ -1,4 +1,7 @@
-import { Megaphone, MessageSquare, UserCircle, LogOut, ArrowLeft, Home, School } from 'lucide-react';
+import {
+    Megaphone, MessageSquare, UserCircle, LogOut, ArrowLeft,
+    Home, School, ChevronDown, Bell, BookOpen, Paperclip
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../services/api';
@@ -6,11 +9,13 @@ import { showToast } from '../../utils/toast';
 import { useStudentProfile } from '../../hooks/useProfile';
 import { useAnnouncements } from '../../hooks/useAnnouncements';
 import { useMessages } from '../../hooks/useMessages';
-import type { Message } from '../../types/panelTypes';
+import type { Announcement, Message } from '../../types/panelTypes';
 
 import SharedAnnouncementModule from '../../components/shared/SharedAnnouncementModule';
 import SharedMessagingModule from '../../components/shared/SharedMessagingModule';
 import SharedProfileModule from '../../components/shared/SharedProfileModule';
+
+type TabId = 'overview' | 'announcements' | 'messages' | 'profile';
 
 export default function StudentPanel() {
     const navigate = useNavigate();
@@ -19,11 +24,12 @@ export default function StudentPanel() {
     const isParentViewing = location.state?.isParentViewing || false;
     const studentSchoolNumber = location.state?.studentSchoolNumber;
 
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab, setActiveTab] = useState<TabId>('overview');
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-    const fetchUrl = isParentViewing && studentSchoolNumber ? `/students/number/${studentSchoolNumber}` : null;
+    const fetchUrl = isParentViewing && studentSchoolNumber
+        ? `/students/number/${studentSchoolNumber}` : null;
     const { profile, loading: profileLoading, refresh: refreshProfile } = useStudentProfile(fetchUrl);
 
     const { announcements: rawAnnouncements, loading: announcementsLoading, fetchAll: fetchAnnouncements } = useAnnouncements();
@@ -31,20 +37,25 @@ export default function StudentPanel() {
 
     const loading = profileLoading || announcementsLoading || messagesLoading;
 
-    // Handle back button effectively
-    const isNotHome = activeTab !== 'overview';
-    const isNotHomeRef = useRef(isNotHome);
+    // ─── History API: Geri/İleri Tuşu Koruması ──────────────────────────────
+    const handleTabChange = (tab: TabId) => {
+        setActiveTab(tab);
+        window.history.pushState({ tab }, '', window.location.pathname);
+    };
+
+    const isNotHomeRef = useRef(activeTab !== 'overview');
 
     useEffect(() => {
-        window.history.replaceState({ page: 'base' }, '', window.location.href);
-        window.history.pushState({ page: 'trap' }, '', window.location.href);
+        window.history.replaceState({ tab: 'overview' }, '', window.location.pathname);
 
-        const handlePopState = () => {
-            if (isNotHomeRef.current) {
+        const handlePopState = (event: PopStateEvent) => {
+            const prevTab = event.state?.tab as TabId | undefined;
+            if (!prevTab || prevTab === 'overview') {
                 setActiveTab('overview');
-            } else {
                 setShowLogoutModal(true);
-                window.history.pushState({ page: 'trap' }, '', window.location.href);
+                window.history.pushState({ tab: 'overview' }, '', window.location.pathname);
+            } else {
+                setActiveTab(prevTab);
             }
         };
 
@@ -53,184 +64,225 @@ export default function StudentPanel() {
     }, []);
 
     useEffect(() => {
-        if (isNotHome && !isNotHomeRef.current) {
-            window.history.pushState({ page: 'subpage' }, '', window.location.href);
-        }
-        isNotHomeRef.current = isNotHome;
-    }, [isNotHome]);
+        isNotHomeRef.current = activeTab !== 'overview';
+    }, [activeTab]);
+    // ─────────────────────────────────────────────────────────────────────────
 
-    const fetchInitialData = async () => {
-        await Promise.all([
-            refreshProfile(),
-            fetchAnnouncements(),
-            fetchMessages()
-        ]);
-    };
+    useEffect(() => {
+        refreshProfile();
+        fetchAnnouncements();
+        fetchMessages();
+    }, []);
+
+    const validAnnouncements = rawAnnouncements.filter(ann => {
+        if (!ann.targetClasses?.length) return true;
+        return ann.targetClasses.includes('Genel Duyuru') || ann.targetClasses.includes(profile?.grade || '');
+    });
+
+    const recentAnnouncements = [...validAnnouncements]
+        .sort((a, b) => new Date(b.createdDate || '').getTime() - new Date(a.createdDate || '').getTime())
+        .slice(0, 4);
+
+    const unreadCount = messages.filter(m => m.type === 'INBOX' && !m.isRead).length;
 
     const handleSendMessage = async (receiverId: string, subject: string, content: string) => {
-        if (!receiverId) {
-            showToast('Lütfen listeden bir alıcı seçin.', 'error');
-            return;
-        }
-
+        if (!receiverId) { showToast('Lütfen listeden bir alıcı seçin.', 'error'); return; }
         try {
             await sendMessage({ receiverId, subject, content });
             showToast('Mesaj başarıyla gönderildi!', 'success');
-            await fetchInitialData();
-        } catch {
-            showToast('Mesaj gönderilemedi.', 'error');
-        }
+            await fetchMessages();
+        } catch { showToast('Mesaj gönderilemedi.', 'error'); }
     };
 
     const handleReadMessage = async (msg: Message) => {
-        if (msg.type === 'INBOX' && !msg.isRead) {
-            await markRead(msg.id);
-        }
+        if (msg.type === 'INBOX' && !msg.isRead) await markRead(msg.id);
     };
 
     const handleProfileUpdate = async (viewMode: string, formData: any) => {
-        if (isParentViewing) {
-            showToast('Öğrenci bilgileri veli yetkisiyle güncellenemez.', 'error');
-            return;
-        }
-
+        if (isParentViewing) { showToast('Öğrenci bilgileri veli yetkisiyle güncellenemez.', 'error'); return; }
         try {
             if (viewMode === 'editPassword') {
-                if (!formData.currentPassword || !formData.newPassword) {
-                    showToast('Lütfen mevcut ve yeni şifrenizi girin.', 'error');
-                    return;
-                }
-                await api.put('/users/me', {
-                    password: formData.newPassword,
-                    currentPassword: formData.currentPassword
-                });
+                await api.put('/users/me', { password: formData.newPassword, currentPassword: formData.currentPassword });
             } else {
-                await api.put('/users/me', {
-                    firstName: formData.firstName,
-                    lastName: formData.lastName,
-                    email: formData.email,
-                    phone: formData.phone
-                });
+                await api.put('/users/me', { firstName: formData.firstName, lastName: formData.lastName, email: formData.email, phone: formData.phone });
             }
             showToast('Profil bilgileriniz başarıyla güncellendi.', 'success');
-            await fetchInitialData();
-        } catch {
-            showToast('Profil güncellenemedi.', 'error');
-        }
+            await refreshProfile();
+        } catch { showToast('Profil güncellenemedi.', 'error'); }
     };
 
-    const handleLogoutConfirm = () => {
-        localStorage.clear();
-        navigate('/', { replace: true });
-    };
+    const handleLogoutConfirm = () => { localStorage.clear(); navigate('/', { replace: true }); };
 
     const getInitials = (first?: string, last?: string) => {
         if (!first || !last) return 'ÖG';
         return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
     };
 
-    const validAnnouncements = rawAnnouncements.filter(ann => {
-        const matchesClass = !profile?.grade || !ann.targetClasses?.length
-            ? true
-            : ann.targetClasses.includes('Genel Duyuru') || ann.targetClasses.includes(profile.grade);
-        return matchesClass;
-    });
+    const getTypeBadge = (type: string) => {
+        const map: Record<string, { label: string; cls: string }> = {
+            HOMEWORK:  { label: 'Ödev',    cls: 'bg-amber-100 text-amber-700' },
+            EXAM:      { label: 'Sınav',   cls: 'bg-red-100 text-red-700' },
+            EXAM_INFO: { label: 'Sınav',   cls: 'bg-red-100 text-red-700' },
+            EVENT:     { label: 'Etkinlik',cls: 'bg-purple-100 text-purple-700' },
+        };
+        const d = map[type] ?? { label: 'Genel', cls: 'bg-sky-100 text-sky-700' };
+        return <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-lg ${d.cls}`}>{d.label}</span>;
+    };
 
-    const unreadCount = messages.filter(m => m.type === 'INBOX' && !m.isRead).length;
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 text-sky-600 font-bold animate-pulse text-xl">
+            Öğrenci Paneli Yükleniyor...
+        </div>
+    );
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center bg-transparent text-indigo-600 font-bold animate-pulse text-xl">Öğrenci Paneli Hazırlanıyor...</div>;
+    const navItems: Array<{ id: TabId; label: string; icon: React.ElementType; badge?: number }> = [
+        { id: 'overview',      label: 'Anasayfa',        icon: Home },
+        { id: 'announcements', label: 'Duyuru & Ödevler',icon: Megaphone },
+        { id: 'messages',      label: 'İletişim',         icon: MessageSquare, badge: unreadCount },
+        { id: 'profile',       label: 'Profilim',         icon: UserCircle },
+    ];
 
-    return ( 
-        <div className="min-h-screen bg-transparent text-slate-800 flex font-sans selection:bg-indigo-500/30">
-            <aside className="w-72 glass-panel border-r border-white/40 flex flex-col shadow-lg z-10 shrink-0">
-                <div onClick={() => setActiveTab('overview')} className="p-8 border-b border-slate-100 cursor-pointer hover:bg-transparent transition-colors group">
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-800 text-indigo-600 tracking-tight group-hover:scale-105 transition-transform origin-left">
-                        EduConnect
-                    </h1>
-                    <p className="text-xs text-slate-500 mt-2 uppercase tracking-widest font-bold flex items-center gap-1">
-                        Öğrenci Portalı
-                        {isParentViewing && <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md ml-1 border border-purple-200">Veli Modu</span>}
-                    </p>
-                </div>
+    return (
+        <div className="font-sans min-h-screen bg-slate-50 flex overflow-hidden text-slate-800">
 
-                <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-                    <button onClick={() => setActiveTab('overview')} className={`w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all group font-semibold ${activeTab === 'overview' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 hover:bg-slate-100 hover:text-indigo-700'}`}>
-                        <span className="text-xl group-hover:scale-110 transition-transform"><Home className="w-6 h-6" /></span>
-                        <span className="tracking-wide">Anasayfa</span>
-                    </button>
-                    <button onClick={() => setActiveTab('announcements')} className={`w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all group font-semibold ${activeTab === 'announcements' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 hover:bg-slate-100 hover:text-indigo-700'}`}>
-                        <span className="text-xl group-hover:scale-110 transition-transform"><Megaphone className="w-6 h-6" /></span>
-                        <span className="tracking-wide">Duyuru & Ödevler</span>
-                    </button>
-                    <button onClick={() => setActiveTab('messages')} className={`w-full flex items-center justify-between px-5 py-3.5 rounded-xl transition-all group font-semibold ${activeTab === 'messages' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 hover:bg-slate-100 hover:text-indigo-700'}`}>
-                        <div className="flex items-center space-x-4">
-                            <span className="text-xl group-hover:scale-110 transition-transform"><MessageSquare className="w-6 h-6" /></span>
-                            <span className="tracking-wide">İletişim</span>
+            {/* ── SOL MENÜ (Sidebar) ─────────────────────────────────────────── */}
+            <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shadow-sm z-20 flex-shrink-0">
+                {/* Logo */}
+                <button
+                    onClick={() => handleTabChange('overview')}
+                    className="h-20 flex items-center px-6 border-b border-slate-100 w-full text-left hover:bg-sky-50/50 transition-colors group"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-sky-600 rounded-lg flex items-center justify-center text-white shadow-md group-hover:bg-sky-700 transition-colors">
+                            <School className="w-6 h-6" />
                         </div>
-                        {unreadCount > 0 && <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold tracking-tight text-slate-800">{unreadCount}</span>}
-                    </button>
-                    <button onClick={() => setActiveTab('profile')} className={`w-full flex items-center space-x-4 px-5 py-3.5 rounded-xl transition-all group font-semibold ${activeTab === 'profile' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 hover:bg-slate-100 hover:text-indigo-700'}`}>
-                        <span className="text-xl group-hover:scale-110 transition-transform"><UserCircle className="w-6 h-6" /></span>
-                        <span className="tracking-wide">Profilim</span>
-                    </button>
+                        <div>
+                            <h1 className="text-lg font-bold text-slate-800 tracking-tight leading-tight">EduConnect</h1>
+                            <div className="flex items-center gap-1.5">
+                                <p className="text-[10px] font-bold text-sky-600 uppercase tracking-widest">Öğrenci Portalı</p>
+                                {isParentViewing && (
+                                    <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold">Veli</span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </button>
+
+                {/* Nav Items */}
+                <nav className="flex-1 px-4 py-6 space-y-1">
+                    {navItems.map(item => {
+                        const Icon = item.icon;
+                        const isActive = activeTab === item.id;
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => handleTabChange(item.id)}
+                                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 font-semibold ${
+                                    isActive
+                                        ? 'bg-sky-50 text-sky-700 shadow-sm'
+                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                                }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Icon className={`w-5 h-5 ${isActive ? 'text-sky-600' : 'text-slate-400'}`} />
+                                    <span>{item.label}</span>
+                                </div>
+                                {item.badge && item.badge > 0 ? (
+                                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                        {item.badge}
+                                    </span>
+                                ) : null}
+                            </button>
+                        );
+                    })}
                 </nav>
 
+                {/* Footer */}
                 <div className="p-4 border-t border-slate-100">
                     {isParentViewing ? (
-                        <button onClick={() => navigate('/parent')} className="w-full flex items-center justify-center space-x-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-4 rounded-xl transition-colors font-bold tracking-tight text-slate-800 shadow-lg border border-indigo-200">
-                            <span className="text-xl"><ArrowLeft className="w-5 h-5" /></span>
-                            <span>Veli Paneline Dön</span>
+                        <button
+                            onClick={() => navigate('/parent')}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-sky-600 hover:bg-sky-50 rounded-xl transition-colors font-semibold"
+                        >
+                            <ArrowLeft className="w-5 h-5" /> Veli Paneline Dön
                         </button>
                     ) : (
-                        <button onClick={() => setShowLogoutModal(true)} className="w-full flex items-center justify-center space-x-2 bg-red-50 hover:bg-red-100 text-red-600 px-4 py-3 rounded-xl transition-colors font-bold shadow-lg border border-red-100 hover:border-red-200">
-                            <LogOut className="w-8 h-8 text-red-500" />
-                            <span>Güvenli Çıkış</span>
+                        <button
+                            onClick={() => setShowLogoutModal(true)}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors font-semibold"
+                        >
+                            <LogOut className="w-5 h-5" /> Çıkış Yap
                         </button>
                     )}
                 </div>
             </aside>
 
-            <main className="flex-1 flex flex-col h-screen overflow-hidden">
-                <header className="glass-panel border-b border-white/40 px-10 py-6 flex justify-between items-center shrink-0">
-                    <div>
-                        <h2 className="text-2xl font-bold tracking-tight text-slate-800 text-slate-800 tracking-tight">
-                            Merhaba, {profile?.firstName}!
-                        </h2>
-                        <p className="text-slate-500 font-medium text-sm mt-1">{profile?.grade ? `${profile?.grade} Sınıfı Öğrencisi` : 'Sınıf Ataması Bekleniyor'}</p>
-                    </div>
-                    <div className="relative z-30">
-                        {isDropdownOpen && <div className="fixed inset-0 z-40 cursor-default" onClick={() => setIsDropdownOpen(false)}></div>}
-                        <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className={`relative z-50 flex items-center gap-3 glass-panel border px-2 py-2 pr-5 rounded-full hover:bg-transparent transition-all shadow-lg group ${isDropdownOpen ? 'border-indigo-400 ring-2 ring-indigo-100' : 'border-white/40'}`}>
-                            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold tracking-tight text-slate-800 shadow-inner tracking-tighter">
-                                {getInitials(profile?.firstName, profile?.lastName)}
+            {/* ── SAĞ KISIM ──────────────────────────────────────────────────── */}
+            <div className="flex-1 flex flex-col h-screen overflow-hidden">
+
+                {/* ÜST BAR */}
+                <header className="h-20 bg-white border-b border-slate-200 px-8 flex items-center justify-end shadow-sm z-10 sticky top-0">
+                    <div className="relative">
+                        <div
+                            className="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-slate-50 transition-colors"
+                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        >
+                            <div className="text-right">
+                                <p className="text-sm font-bold text-slate-700">{profile?.firstName} {profile?.lastName}</p>
+                                <p className="text-[11px] font-semibold text-slate-500">
+                                    {profile?.grade ? `${profile.grade} Sınıfı` : 'Sınıf Ataması Bekleniyor'}
+                                </p>
                             </div>
-                            <div className="text-left hidden md:block">
-                                <p className="text-sm font-bold text-slate-800 leading-tight group-hover:text-indigo-700 transition-colors">{profile?.firstName} {profile?.lastName}</p>
-                                <p className="text-[10px] text-slate-500 font-bold tracking-widest mt-0.5 uppercase flex items-center gap-1">Hesabım <span className="text-[8px]">▼</span></p>
+                            <div className="relative">
+                                <div className="w-10 h-10 bg-sky-100 text-sky-700 rounded-full flex items-center justify-center font-bold text-lg border border-sky-200 shadow-sm">
+                                    {getInitials(profile?.firstName, profile?.lastName)}
+                                </div>
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white"></span>
+                                )}
                             </div>
-                        </button>
+                            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                        </div>
+
                         {isDropdownOpen && (
-                            <div className="absolute right-0 mt-3 w-64 glass-panel border border-white/40 rounded-xl shadow-xl overflow-hidden animate-fade-in-down origin-top-right z-50">
-                                <div className="p-4 border-b border-slate-100 bg-transparent">
-                                    <p className="text-sm font-bold text-slate-800">{profile?.firstName} {profile?.lastName}</p>
-                                    <p className="text-xs text-slate-500 font-medium truncate">{profile?.email || 'E-Posta Belirtilmemiş'}</p>
+                            <div
+                                className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50"
+                                onMouseLeave={() => setIsDropdownOpen(false)}
+                            >
+                                <div className="p-4 border-b border-slate-100 bg-slate-50">
+                                    <p className="font-bold text-slate-700">{profile?.firstName} {profile?.lastName}</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">{profile?.email || 'E-posta belirtilmemiş'}</p>
+                                    {profile?.grade && (
+                                        <span className="inline-flex items-center gap-1 bg-sky-100 text-sky-700 text-[10px] font-bold px-2 py-0.5 rounded-lg mt-1.5">
+                                            <School className="w-3 h-3" /> {profile.grade} Sınıfı
+                                        </span>
+                                    )}
                                 </div>
-                                <div className="py-2">
-                                    <button onClick={() => { setIsDropdownOpen(false); setActiveTab('profile'); }} className="w-full text-left px-5 py-2.5 text-sm font-medium text-slate-700 hover:text-indigo-700 hover:bg-indigo-50 transition-colors flex items-center gap-3">
-                                        <span className="text-lg"><UserCircle className="w-6 h-6" /></span> Profilimi Görüntüle
+                                <div className="p-2 space-y-1">
+                                    <button onClick={() => { handleTabChange('profile'); setIsDropdownOpen(false); }}
+                                        className="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-sky-50 hover:text-sky-700 rounded-lg transition-colors flex items-center gap-2">
+                                        <UserCircle className="w-4 h-4" /> Profilimi Görüntüle
                                     </button>
-                                    <button onClick={() => { setIsDropdownOpen(false); setActiveTab('messages'); }} className="w-full text-left px-5 py-2.5 text-sm font-medium text-slate-700 hover:text-indigo-700 hover:bg-indigo-50 transition-colors flex items-center gap-3">
-                                        <span className="text-lg"><MessageSquare className="w-6 h-6" /></span> İletişim & Mesajlar
+                                    <button onClick={() => { handleTabChange('messages'); setIsDropdownOpen(false); }}
+                                        className="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-sky-50 hover:text-sky-700 rounded-lg transition-colors flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <Bell className="w-4 h-4" /> Bildirimler
+                                        </div>
+                                        {unreadCount > 0 && (
+                                            <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{unreadCount}</span>
+                                        )}
                                     </button>
                                 </div>
-                                <div className="py-2 border-t border-slate-100">
+                                <div className="p-2 border-t border-slate-100">
                                     {isParentViewing ? (
-                                        <button onClick={() => navigate('/parent')} className="w-full text-left px-5 py-2.5 text-sm font-bold text-indigo-600 hover:bg-indigo-50 transition-colors flex items-center gap-3">
-                                            <span className="text-lg"><ArrowLeft className="w-5 h-5" /></span> Veli Paneline Dön
+                                        <button onClick={() => navigate('/parent')}
+                                            className="w-full text-left px-4 py-2.5 text-sm font-bold text-sky-600 hover:bg-sky-50 rounded-lg transition-colors flex items-center gap-2">
+                                            <ArrowLeft className="w-4 h-4" /> Veli Paneline Dön
                                         </button>
                                     ) : (
-                                        <button onClick={() => { setIsDropdownOpen(false); setShowLogoutModal(true); }} className="w-full text-left px-5 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3">
-                                            <span className="text-lg"><LogOut className="w-8 h-8 text-red-500" /></span> Sistemden Çıkış
+                                        <button onClick={() => { setIsDropdownOpen(false); setShowLogoutModal(true); }}
+                                            className="w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2">
+                                            <LogOut className="w-4 h-4" /> Çıkış Yap
                                         </button>
                                     )}
                                 </div>
@@ -239,99 +291,220 @@ export default function StudentPanel() {
                     </div>
                 </header>
 
-                <div className="flex-1 overflow-y-auto p-10 bg-transparent/50">
-                    {activeTab === 'overview' && (
-                        <div className="max-w-6xl mx-auto space-y-8 animate-fade-in-down">
-                            <div className="bg-gradient-to-r from-indigo-600 to-blue-800 rounded-2xl p-10 text-white shadow-lg relative overflow-hidden">
-                                <div className="absolute right-0 top-0 w-64 h-64 glass-panel/10 rounded-full blur-[80px]"></div>
-                                <h1 className="text-4xl font-bold tracking-tight text-slate-800 relative z-10">Eğitim Portalı, {profile?.firstName}!</h1>
-                                <p className="mt-3 text-indigo-100 relative z-10 font-medium text-lg">Derslerinde başarılar. Güncel okul durumun aşağıdadır.</p>
+                {/* ANA İÇERİK */}
+                <main className="flex-1 overflow-y-auto p-8">
+                    <div className="max-w-5xl mx-auto">
+
+                        {/* ── ANASAYFA ─────────────────────────────────────────────── */}
+                        {activeTab === 'overview' && (
+                            <div className="space-y-6 animate-fade-in">
+                                {/* Hoş Geldin Kartı */}
+                                <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+                                    <div className="bg-gradient-to-r from-sky-600 to-blue-700 px-8 py-6 flex items-center justify-between">
+                                        <div>
+                                            <h2 className="text-2xl font-bold text-white tracking-tight">
+                                                Merhaba, {profile?.firstName}! 👋
+                                            </h2>
+                                            <p className="text-sky-100 font-medium mt-1">
+                                                Derslerinde başarılar. Güncel okul durumun aşağıdadır.
+                                            </p>
+                                        </div>
+                                        {/* Sınıf Rozeti */}
+                                        {profile?.grade && (
+                                            <div className="flex-shrink-0 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl px-6 py-4 text-center">
+                                                <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest mb-1">Sınıfın</p>
+                                                <p className="text-3xl font-black text-white leading-none">{profile.grade}</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Stat Widgetları */}
+                                    <div className="grid grid-cols-3 divide-x divide-slate-100">
+                                        <div
+                                            className="p-5 flex items-center gap-4 cursor-pointer hover:bg-sky-50/50 transition-colors group"
+                                            onClick={() => handleTabChange('announcements')}
+                                        >
+                                            <div className="w-12 h-12 bg-sky-50 text-sky-600 rounded-xl flex items-center justify-center group-hover:bg-sky-100 transition-colors flex-shrink-0">
+                                                <BookOpen className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Bekleyen Duyurular</p>
+                                                <p className="text-2xl font-black text-slate-800">{validAnnouncements.length}</p>
+                                            </div>
+                                        </div>
+                                        <div
+                                            className="p-5 flex items-center gap-4 cursor-pointer hover:bg-sky-50/50 transition-colors group"
+                                            onClick={() => handleTabChange('messages')}
+                                        >
+                                            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center group-hover:bg-blue-100 transition-colors flex-shrink-0">
+                                                <MessageSquare className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Okunmamış Mesaj</p>
+                                                <p className="text-2xl font-black text-slate-800">{unreadCount}</p>
+                                            </div>
+                                        </div>
+                                        <div className="p-5 flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                                                <School className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Sınıfım</p>
+                                                <p className="text-2xl font-black text-slate-800">{profile?.grade || '—'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Son Duyurular Feed */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-lg font-bold text-slate-700">Son Duyurular</h3>
+                                        <button
+                                            onClick={() => handleTabChange('announcements')}
+                                            className="text-sm font-bold text-sky-600 hover:text-sky-700 hover:underline transition-colors"
+                                        >
+                                            Tümünü Gör →
+                                        </button>
+                                    </div>
+
+                                    {recentAnnouncements.length === 0 ? (
+                                        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-10 text-center">
+                                            <Megaphone className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                            <p className="text-slate-500 font-medium">Henüz bir duyuru yok.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {recentAnnouncements.map((ann: Announcement) => (
+                                                <div
+                                                    key={ann.id}
+                                                    className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5 flex items-start gap-4 hover:shadow-md hover:border-sky-200 transition-all cursor-pointer group"
+                                                    onClick={() => handleTabChange('announcements')}
+                                                >
+                                                    {/* Sol renk çizgisi */}
+                                                    <div className={`w-1 self-stretch rounded-full flex-shrink-0 ${
+                                                        ann.type === 'HOMEWORK' ? 'bg-amber-400' :
+                                                        ann.type === 'EXAM' || ann.type === 'EXAM_INFO' ? 'bg-red-400' :
+                                                        ann.type === 'EVENT' ? 'bg-purple-400' : 'bg-sky-400'
+                                                    }`}></div>
+
+                                                    {/* Avatar */}
+                                                    <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold flex-shrink-0 group-hover:bg-sky-100 group-hover:text-sky-700 transition-colors">
+                                                        {ann.authorName?.charAt(0) || '?'}
+                                                    </div>
+
+                                                    {/* İçerik */}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                            {getTypeBadge(ann.type)}
+                                                            <span className="text-xs text-slate-400 font-semibold">
+                                                                {ann.authorName} • {new Date(ann.createdDate || '').toLocaleDateString('tr-TR')}
+                                                            </span>
+                                                        </div>
+                                                        <h4 className="font-bold text-slate-800 truncate group-hover:text-sky-700 transition-colors">{ann.title}</h4>
+                                                        <p className="text-sm text-slate-500 mt-0.5 line-clamp-1">{ann.content}</p>
+                                                    </div>
+
+                                                    {/* Ek dosya göstergesi */}
+                                                    {ann.attachedFiles && ann.attachedFiles.length > 0 && (
+                                                        <div className="flex items-center gap-1 text-slate-400 text-xs font-semibold flex-shrink-0">
+                                                            <Paperclip className="w-3.5 h-3.5" />
+                                                            {ann.attachedFiles.length}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
+                        )}
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div onClick={() => setActiveTab('announcements')} className="glass-panel p-6 rounded-2xl border border-white/40 shadow-lg flex items-center gap-4 hover:-translate-y-1 transition-transform cursor-pointer group">
-                                    <div className="w-16 h-16 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-3xl font-bold tracking-tight text-slate-800 group-hover:bg-blue-100 transition-colors"><Megaphone className="w-6 h-6" /></div>
-                                    <div>
-                                        <p className="text-sm font-bold text-slate-400 uppercase">Sınıf Panosu</p>
-                                        <p className="text-3xl font-bold tracking-tight text-slate-800 text-slate-800">{validAnnouncements.length} <span className="text-sm text-slate-400 font-medium">Duyuru</span></p>
-                                    </div>
-                                </div>
-                                <div onClick={() => setActiveTab('messages')} className="glass-panel p-6 rounded-2xl border border-white/40 shadow-lg flex items-center gap-4 hover:-translate-y-1 transition-transform cursor-pointer group">
-                                    <div className="w-16 h-16 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-3xl font-bold tracking-tight text-slate-800 group-hover:bg-purple-100 transition-colors"><MessageSquare className="w-6 h-6" /></div>
-                                    <div>
-                                        <p className="text-sm font-bold text-slate-400 uppercase">Okunmamış Mesaj</p>
-                                        <p className="text-3xl font-bold tracking-tight text-slate-800 text-slate-800">{unreadCount}</p>
-                                    </div>
-                                </div>
-                                <div className="glass-panel p-6 rounded-2xl border border-white/40 shadow-lg flex items-center gap-4">
-                                    <div className="w-16 h-16 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center font-bold tracking-tight text-slate-800"><School className="w-8 h-8" /></div>
-                                    <div>
-                                        <p className="text-sm font-bold text-slate-400 uppercase">Sınıfın</p>
-                                        <p className="text-2xl font-bold tracking-tight text-slate-800 text-slate-800">{profile?.grade || 'Atanmadı'}</p>
-                                    </div>
-                                </div>
+                        {/* ── DUYURU & ÖDEVLER ─────────────────────────────────────── */}
+                        {activeTab === 'announcements' && (
+                            <div className="animate-fade-in">
+                                <SharedAnnouncementModule
+                                    announcements={validAnnouncements}
+                                    userGrade={profile?.grade}
+                                    theme="sky"
+                                />
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {activeTab === 'announcements' && (
-                        <SharedAnnouncementModule
-                            announcements={validAnnouncements}
-                            userGrade={profile?.grade}
-                        />
-                    )}
+                        {/* ── İLETİŞİM ─────────────────────────────────────────────── */}
+                        {activeTab === 'messages' && (
+                            <div className="h-[calc(100vh-140px)] animate-fade-in -mx-8 -my-8">
+                                <SharedMessagingModule
+                                    messages={messages}
+                                    userRoleLabel="Öğrenci Hesabı"
+                                    theme="sky"
+                                    onSendMessage={handleSendMessage}
+                                    onReadMessage={handleReadMessage}
+                                />
+                            </div>
+                        )}
 
-                    {activeTab === 'messages' && (
-                        <SharedMessagingModule
-                            messages={messages}
-                            onSendMessage={handleSendMessage}
-                            onReadMessage={handleReadMessage}
-                            userRoleLabel="Öğrenci Hesabı"
-                        />
-                    )}
+                        {/* ── PROFİL ───────────────────────────────────────────────── */}
+                        {activeTab === 'profile' && (
+                            <div className="max-w-4xl mx-auto animate-fade-in w-full py-4">
+                                <SharedProfileModule
+                                    theme="sky"
+                                    headerInfo={{
+                                        initials: getInitials(profile?.firstName, profile?.lastName),
+                                        firstName: profile?.firstName || '',
+                                        lastName: profile?.lastName || '',
+                                        badgeText: profile?.grade ? `${profile.grade} Sınıfı` : undefined,
+                                        schoolName: profile?.schoolName || ''
+                                    }}
+                                    contactInfo={[
+                                        { label: 'Kullanıcı Adı', value: `@${profile?.username}` },
+                                        { label: 'Telefon', value: profile?.phone || '-' },
+                                        { label: 'E-Posta', value: profile?.email || '-' }
+                                    ]}
+                                    additionalInfoTitle="Kayıt Bilgileri"
+                                    additionalInfo={[
+                                        { label: 'Okul Numarası', value: profile?.schoolNumber || '-' },
+                                        { label: 'Kayıtlı Veli', value: profile?.parentFullName || 'Belirtilmemiş' }
+                                    ]}
+                                    initialFormState={{
+                                        firstName: profile?.firstName || '',
+                                        lastName: profile?.lastName || '',
+                                        email: profile?.email || '',
+                                        phone: profile?.phone || ''
+                                    }}
+                                    onUpdateProfile={handleProfileUpdate}
+                                    hideEditOptions={isParentViewing}
+                                />
+                            </div>
+                        )}
+                    </div>
+                </main>
+            </div>
 
-                    {activeTab === 'profile' && (
-                        <SharedProfileModule
-                            headerInfo={{
-                                initials: getInitials(profile?.firstName, profile?.lastName),
-                                firstName: profile?.firstName || '',
-                                lastName: profile?.lastName || '',
-                                badgeText: profile?.grade ? `${profile?.grade} SINIFI ÖĞRENCİSİ` : undefined
-                            }}
-                            contactInfo={[
-                                { label: 'Sistem Kullanıcı Adı', value: `@${profile?.username}`, valueClass: 'text-indigo-600' },
-                                { label: 'Telefon Numarası', value: profile?.phone || 'Belirtilmemiş' },
-                                { label: 'E-Posta Adresi', value: profile?.email || 'Belirtilmemiş' }
-                            ]}
-                            additionalInfoTitle="Kayıt Bilgileri"
-                            additionalInfo={[
-                                { label: 'Okul Numarası', value: profile?.schoolNumber },
-                                { label: 'Kayıtlı Veli', value: profile?.parentFullName || 'Belirtilmemiş' }
-                            ]}
-                            initialFormState={{
-                                firstName: profile?.firstName || '',
-                                lastName: profile?.lastName || '',
-                                email: profile?.email || '',
-                                phone: profile?.phone || ''
-                            }}
-                            onUpdateProfile={handleProfileUpdate}
-                            hideEditOptions={isParentViewing}
-                        />
-                    )}
-                </div>
-            </main>
-
+            {/* ── ÇIKIŞ MODALI ─────────────────────────────────────────────── */}
             {showLogoutModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md animate-fade-in">
-                    <div className="glass-panel rounded-2xl shadow-2xl w-full max-w-md p-8 border border-white/40 relative animate-scale-in z-50 text-center">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 border border-slate-100 text-center animate-fade-in">
                         <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-6">
-                            <span className="text-4xl"><LogOut className="w-8 h-8 text-red-500" /></span>
+                            <LogOut className="w-10 h-10 text-red-500" />
                         </div>
-                        <h3 className="text-3xl font-bold tracking-tight text-slate-800 text-slate-800 tracking-tight">Sistemden Çıkış</h3>
-                        <p className="text-slate-500 font-medium text-sm mt-3 mb-8 leading-relaxed">Güvenli bir şekilde oturumunuzu sonlandırmak istediğinize emin misiniz?</p>
-                        <div className="flex justify-center gap-4">
-                            <button onClick={() => setShowLogoutModal(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-4 rounded-xl font-bold text-sm transition-colors uppercase tracking-wider">İPTAL</button>
-                            <button onClick={handleLogoutConfirm} className="flex-1 btn-danger py-4 rounded-xl font-bold text-sm shadow-lg transition-all uppercase tracking-wider">ÇIKIŞ YAP</button>
+                        <h3 className="text-2xl font-bold text-slate-800">Sistemden Çıkış</h3>
+                        <p className="text-slate-500 font-medium mt-2 mb-8 text-lg">
+                            Oturumunuzu sonlandırmak istediğinize emin misiniz?
+                        </p>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setShowLogoutModal(false)}
+                                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-4 rounded-2xl font-bold transition-colors"
+                            >
+                                İPTAL
+                            </button>
+                            <button
+                                onClick={handleLogoutConfirm}
+                                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-bold shadow-lg shadow-red-200 transition-all"
+                            >
+                                ÇIKIŞ YAP
+                            </button>
                         </div>
                     </div>
                 </div>
