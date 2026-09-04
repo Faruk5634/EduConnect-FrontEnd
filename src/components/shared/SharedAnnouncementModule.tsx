@@ -6,13 +6,46 @@ import { API_BASE } from '../../services/api';
 interface SharedAnnouncementModuleProps {
     announcements: Announcement[];
     userGrade?: string | null;
+    theme?: 'sky' | 'emerald' | 'amber';
 }
 
-export default function SharedAnnouncementModule({ announcements, userGrade }: SharedAnnouncementModuleProps) {
+export default function SharedAnnouncementModule({ announcements, userGrade, theme = 'sky' }: SharedAnnouncementModuleProps) {
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [announcementSearch, setAnnouncementSearch] = useState('');
     const [announcementTypeFilter, setAnnouncementTypeFilter] = useState('ALL');
     const [announcementSort, setAnnouncementSort] = useState('NEWEST');
+
+    const themeStyles = {
+        sky: {
+            bannerBg: 'bg-gradient-to-br from-sky-50 via-white to-white',
+            backBtn: 'text-slate-500 hover:text-sky-600',
+            avatarBg: 'bg-sky-100',
+            avatarText: 'text-sky-600',
+            attachPanel: 'bg-sky-50/50',
+            fileIcon: 'text-sky-600',
+            fileText: 'text-sky-700'
+        },
+        emerald: {
+            bannerBg: 'bg-gradient-to-br from-emerald-50 via-white to-white',
+            backBtn: 'text-slate-500 hover:text-emerald-600',
+            avatarBg: 'bg-emerald-100',
+            avatarText: 'text-emerald-600',
+            attachPanel: 'bg-emerald-50/50',
+            fileIcon: 'text-emerald-600',
+            fileText: 'text-emerald-700'
+        },
+        amber: {
+            bannerBg: 'bg-gradient-to-br from-amber-50 via-white to-white',
+            backBtn: 'text-slate-500 hover:text-amber-600',
+            avatarBg: 'bg-amber-100',
+            avatarText: 'text-amber-600',
+            attachPanel: 'bg-amber-50/50',
+            fileIcon: 'text-amber-600',
+            fileText: 'text-amber-700'
+        }
+    };
+    
+    const currentTheme = themeStyles[theme] || themeStyles.sky;
 
     const getTypeBadge = (type: string) => {
         switch (type) {
@@ -52,44 +85,55 @@ export default function SharedAnnouncementModule({ announcements, userGrade }: S
 
     if (selectedAnnouncement) {
         return (
-            <div className="glass-panel rounded-2xl shadow-xl overflow-hidden border border-white/40 animate-scale-in">
-                <div className={`relative h-48 ${getHeaderBgForType(selectedAnnouncement.type)} flex items-end p-8`}>
-                    <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-                    <div className="absolute right-0 top-0 w-64 h-64 glass-panel/10 rounded-full blur-[80px]"></div>
-                    <button onClick={() => setSelectedAnnouncement(null)} className="absolute top-6 left-6 glass-panel/20 hover:glass-panel/40 backdrop-blur-md text-white px-5 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg border border-white/30">
+            <div className="glass-panel rounded-2xl shadow-xl overflow-hidden border border-white/40 animate-scale-in max-w-4xl mx-auto">
+                <div className={`relative h-48 ${currentTheme.bannerBg} flex items-end p-8 border-b border-slate-100`}>
+                    
+                    <div className="absolute right-0 top-0 w-64 h-64 bg-blue-200/20 rounded-full blur-[80px]"></div>
+                    <button onClick={() => setSelectedAnnouncement(null)} className={`absolute top-6 left-6 ${currentTheme.backBtn} hover:bg-slate-100/80 px-4 py-2.5 rounded-xl font-bold transition-colors flex items-center gap-2`}>
                         <span>←</span> Akışa Geri Dön
                     </button>
                     <div className="relative z-10 flex gap-3">
-                        <span className="glass-panel/90 text-slate-800 px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-tight text-slate-800 tracking-widest uppercase shadow-lg">
+                        <span className="bg-white text-slate-700 px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-tight uppercase shadow-sm border border-slate-200">
                             {selectedAnnouncement.type === 'HOMEWORK' ? '📝 ÖDEV' : selectedAnnouncement.type === 'EXAM_INFO' ? '🎯 SINAV' : selectedAnnouncement.type === 'EVENT' ? '🎉 ETKİNLİK' : '📢 GENEL'}
-                        </span>
-                        <span className="glass-panel/20 backdrop-blur-md text-white px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-tight text-slate-800 tracking-widest uppercase border border-white/30 shadow-lg max-w-[300px] truncate" title={selectedAnnouncement.targetClasses?.join(', ')}>
-                            {selectedAnnouncement.targetClasses?.join(', ') || 'Genel Duyuru'}
                         </span>
                     </div>
                 </div>
-                <div className="p-10 md:p-14">
-                    <h2 className="text-4xl font-bold tracking-tight text-slate-800 text-slate-800 mb-8 leading-tight tracking-tight">{selectedAnnouncement.title}</h2>
-                    <div className="flex items-center gap-4 mb-10 pb-8 border-b border-slate-100">
-                        <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-2xl font-bold text-slate-600 shadow-lg">
+                <div className="p-8 md:p-12">
+                    <h2 className="text-3xl font-bold tracking-tight text-slate-900 mb-6 leading-tight">{selectedAnnouncement.title}</h2>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-4 mb-8 pb-6 border-b border-slate-100">
+                        <div className={`w-14 h-14 rounded-full ${currentTheme.avatarBg} flex items-center justify-center text-2xl font-bold ${currentTheme.avatarText} shadow-sm border border-white flex-shrink-0`}>
                             {selectedAnnouncement.authorName.charAt(0)}
                         </div>
-                        <div>
-                            <p className="text-lg font-bold text-slate-800">{selectedAnnouncement.authorName}</p>
-                            <p className="text-xs font-bold text-slate-400 tracking-wide mt-1">
-                                Yayınlanma: {new Date(selectedAnnouncement.createdDate).toLocaleDateString('tr-TR')} • {new Date(selectedAnnouncement.createdDate).toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})}
-                            </p>
+                        <div className="flex-1 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-8">
+                            <div>
+                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Gönderen</p>
+                                <p className="text-base font-bold text-slate-800">{selectedAnnouncement.authorName}</p>
+                            </div>
+                            <div className="hidden md:block w-px h-8 bg-slate-200"></div>
+                            <div>
+                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Yayınlanma</p>
+                                <p className="text-sm font-bold text-slate-700">
+                                    {new Date(selectedAnnouncement.createdDate).toLocaleDateString('tr-TR')} <span className="text-slate-400 font-normal">• {new Date(selectedAnnouncement.createdDate).toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})}</span>
+                                </p>
+                            </div>
+                            <div className="hidden md:block w-px h-8 bg-slate-200"></div>
+                            <div>
+                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Hedef Sınıflar</p>
+                                <p className="text-sm font-bold text-slate-700 max-w-[200px] truncate" title={selectedAnnouncement.targetClasses?.join(', ')}>
+                                    {selectedAnnouncement.targetClasses?.join(', ') || 'Genel Duyuru'}
+                                </p>
+                            </div>
                         </div>
                     </div>
-                    <div className="prose max-w-none text-slate-600 font-medium leading-relaxed whitespace-pre-wrap text-lg">{selectedAnnouncement.content}</div>
+                    <div className="mt-6 text-base text-slate-700 leading-relaxed whitespace-pre-wrap">{selectedAnnouncement.content}</div>
 
                     {selectedAnnouncement.attachedFiles && selectedAnnouncement.attachedFiles.length > 0 && (
-                        <div className="mt-12 pt-8 border-t border-slate-100 bg-transparent/50 p-6 rounded-2xl border border-slate-100">
-                            <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"><span>📎</span> Ekli Dosyalar ({selectedAnnouncement.attachedFiles.length})</h4>
+                        <div className={`mt-12 p-6 rounded-2xl ${currentTheme.attachPanel} border border-slate-100`}>
+                            <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"><span className={currentTheme.fileIcon}>📎</span> Ekli Dosyalar ({selectedAnnouncement.attachedFiles.length})</h4>
                             <div className="flex flex-wrap gap-4">
                                 {selectedAnnouncement.attachedFiles.map((file, idx) => (
-                                    <a key={idx} href={`${API_BASE}${file.fileUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 glass-panel hover:bg-indigo-50 text-indigo-700 px-6 py-4 rounded-xl text-sm font-bold transition-all shadow-lg border border-white/40 hover:border-indigo-200 hover:shadow-lg">
-                                        <span className="text-2xl text-indigo-500 flex-shrink-0">📄</span>
+                                    <a key={idx} href={`${API_BASE}${file.fileUrl}`} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-3 bg-white ${currentTheme.fileText} px-6 py-4 rounded-xl text-sm font-bold transition-all shadow-sm border border-slate-100 hover:shadow-md hover:border-slate-300`}>
+                                        <span className={`text-2xl ${currentTheme.fileIcon} flex-shrink-0`}>📄</span>
                                         <span className="truncate max-w-[200px]" title={file.fileName}>{file.fileName || 'Dosyayı İndir'}</span>
                                         <span className="text-slate-400 flex-shrink-0">⬇</span>
                                     </a>
@@ -103,11 +147,10 @@ export default function SharedAnnouncementModule({ announcements, userGrade }: S
     }
 
     return (
-        <div className="flex flex-col-reverse lg:flex-row gap-8">
-            <div className="flex-[2] space-y-6">
-                <div className="glass-panel p-4 rounded-2xl shadow-lg border border-white/40 flex flex-col md:flex-row gap-4 mb-8">
-                    <div className="flex-1 relative">
-                        <span className="absolute left-4 top-3 text-slate-400">🔍</span>
+        <div className="w-full max-w-5xl mx-auto space-y-6">
+            <div className="glass-panel p-4 rounded-2xl shadow-lg border border-white/40 flex flex-col md:flex-row gap-4 mb-8">
+                <div className="flex-1 relative">
+                    <span className="absolute left-4 top-3 text-slate-400">🔍</span>
                         <input
                             type="text"
                             placeholder="Duyuru veya ödev ara..."
@@ -147,9 +190,9 @@ export default function SharedAnnouncementModule({ announcements, userGrade }: S
                     </div>
                 ) : (
                     filteredAnnouncements.map((ann) => (
-                        <div key={ann.id} onClick={() => setSelectedAnnouncement(ann)} className="glass-panel border border-white/40 rounded-2xl p-6 shadow-lg hover:shadow-lg transition-all cursor-pointer relative overflow-hidden group hover:-translate-y-1">
+                        <div key={ann.id} onClick={() => setSelectedAnnouncement(ann)} className="glass-panel border border-white/40 rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-xl transition-all cursor-pointer relative overflow-hidden group hover:-translate-y-1">
                             <div className={`absolute left-0 top-0 bottom-0 w-1 ${ann.type === 'HOMEWORK' ? 'bg-orange-400' : ann.type === 'EXAM_INFO' ? 'bg-red-400' : ann.type === 'EVENT' ? 'bg-purple-400' : 'bg-blue-400'}`}></div>
-                            <div className="flex justify-between items-start mb-4">
+                            <div className="flex justify-between items-start mb-3">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg font-bold text-slate-600 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">{ann.authorName.charAt(0)}</div>
                                     <div>
@@ -164,9 +207,9 @@ export default function SharedAnnouncementModule({ announcements, userGrade }: S
                                     </span>
                                 </div>
                             </div>
-                            <h4 className="text-xl font-bold tracking-tight text-slate-800 text-slate-800 mb-2 group-hover:text-indigo-600 transition-colors">{ann.title}</h4>
-                            <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap mb-4 line-clamp-3">{ann.content}</p>
-                            <div className="mt-4 pt-4 border-t border-slate-50 flex items-center justify-between">
+                            <h4 className="text-lg font-bold tracking-tight text-slate-800 mb-4 group-hover:text-indigo-600 transition-colors">{ann.title}</h4>
+                            <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap mb-6 line-clamp-2">{ann.content}</p>
+                            <div className="mt-6 pt-6 border-t border-slate-50 flex items-center justify-between">
                                 <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">Detayları Oku →</span>
 
                                 {ann.attachedFiles && ann.attachedFiles.length > 0 && (
@@ -176,11 +219,6 @@ export default function SharedAnnouncementModule({ announcements, userGrade }: S
                         </div>
                     ))
                 )}
-            </div>
-            
-            <div className="flex-1 hidden lg:block">
-                {/* Sağ taraf boş kalabilir veya ek bilgiler konabilir, tasarım bütünlüğü için */}
-            </div>
         </div>
     );
 }

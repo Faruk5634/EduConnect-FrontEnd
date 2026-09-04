@@ -222,9 +222,19 @@ export default function StudentPanel() {
 
                 {/* ÜST BAR */}
                 <header className="h-20 bg-white border-b border-slate-200 px-8 flex items-center justify-end shadow-sm z-10 sticky top-0">
-                    <div className="relative">
-                        <div
-                            className="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-slate-50 transition-colors"
+                    <div className="flex items-center gap-4">
+                        
+                        <div className="relative cursor-pointer hidden sm:block">
+                            <div className="w-10 h-10 bg-slate-50 hover:bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 transition-colors">
+                                <Bell className="w-5 h-5 text-slate-600" />
+                            </div>
+                            {unreadCount > 0 && (
+                                <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
+                            )}
+                        </div>
+                        <div className="relative">
+                            <div
+                                className="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-slate-50 transition-colors"
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                         >
                             <div className="text-right">
@@ -289,6 +299,8 @@ export default function StudentPanel() {
                             </div>
                         )}
                     </div>
+                    </div>
+
                 </header>
 
                 {/* ANA İÇERİK */}

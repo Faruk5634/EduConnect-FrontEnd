@@ -5,6 +5,7 @@ import { showToast } from '../../utils/toast';
 import { useTeacherProfile } from '../../hooks/useProfile';
 import { useMessages } from '../../hooks/useMessages';
 import { useAnnouncements } from '../../hooks/useAnnouncements';
+import { API_BASE } from '../../services/api';
 import SharedMessagingModule from '../../components/shared/SharedMessagingModule';
 import TeacherAnnouncementManager from '../../components/teacher/TeacherAnnouncementManager';
 import SharedProfileModule from '../../components/shared/SharedProfileModule';
@@ -164,7 +165,7 @@ export default function TeacherPanel() {
                             <button
                                 key={item.id}
                                 onClick={() => handleTabChange(item.id)}
-                                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 font-semibold ${isSubItem ? 'pl-8' : ''} ${
+                                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 font-semibold ${
                                     isActive
                                         ? 'bg-emerald-50 text-emerald-700 shadow-sm'
                                         : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
@@ -200,9 +201,19 @@ export default function TeacherPanel() {
 
                 {/* ÜST BAR (Navbar) */}
                 <header className="h-20 bg-white border-b border-slate-200 px-8 flex items-center justify-end shadow-sm z-10 sticky top-0">
-                    <div className="relative">
-                        <div
-                            className="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-slate-50 transition-colors border border-transparent"
+                    <div className="flex items-center gap-4">
+                        
+                        <div className="relative cursor-pointer hidden sm:block">
+                            <div className="w-10 h-10 bg-slate-50 hover:bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 transition-colors">
+                                <Bell className="w-5 h-5 text-slate-600" />
+                            </div>
+                            {unreadCount > 0 && (
+                                <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
+                            )}
+                        </div>
+                        <div className="relative">
+                            <div
+                                className="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-slate-50 transition-colors border border-transparent"
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                         >
                             <div className="text-right">
@@ -262,6 +273,8 @@ export default function TeacherPanel() {
                             </div>
                         )}
                     </div>
+                    </div>
+
                 </header>
 
                 {/* ANA İÇERİK ALANI */}
@@ -420,7 +433,7 @@ export default function TeacherPanel() {
                                                     {ann.attachedFiles && ann.attachedFiles.length > 0 && (
                                                         <div className="mt-3 flex flex-wrap gap-2">
                                                             {ann.attachedFiles.map((att, idx) => (
-                                                                <a key={idx} href={att.fileUrl} target="_blank" rel="noopener noreferrer"
+                                                                <a key={idx} href={`${API_BASE}${att.fileUrl}`} target="_blank" rel="noopener noreferrer"
                                                                     className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors">
                                                                     <Folder className="w-4 h-4" /> {att.fileName}
                                                                 </a>

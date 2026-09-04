@@ -162,14 +162,14 @@ export default function ParentPanel() {
             {/* ─── SOL MENÜ (SIDEBAR) ───────────────────────────────────────────────── */}
             <aside className="w-20 lg:w-72 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 shadow-sm z-20 transition-all duration-300">
                 <div>
-                    <div className="h-20 flex items-center justify-center lg:justify-start lg:px-8 border-b border-slate-100">
-                        <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-amber-200/50 flex-shrink-0">
-                            EC
+                    <button onClick={() => handleTabChange('overview')} className="h-20 w-full flex items-center justify-center lg:justify-start lg:px-8 border-b border-slate-100 hover:bg-slate-50 transition-colors group">
+                        <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-amber-200/50 flex-shrink-0 group-hover:scale-105 transition-transform">
+                            <Users className="w-6 h-6" />
                         </div>
-                        <h1 className="hidden lg:block ml-3 text-xl font-black text-slate-800 tracking-tight">
+                        <h1 className="hidden lg:block ml-3 text-xl font-black text-slate-800 tracking-tight text-left">
                             EduConnect<span className="text-amber-500">.</span>
                         </h1>
-                    </div>
+                    </button>
 
                     <nav className="p-4 space-y-2">
                         <button
